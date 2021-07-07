@@ -4,7 +4,10 @@ A minimal validation library built atop the existing features in .NET's `System.
 Supports .NET Standard 2.0 compliant runtimes.
 
 ## Installation
-The library will soon be available on NuGet, just hold tight! Until then you can copy [the code](src/MinimalValidation/MinimalValidation.cs) directly from this repo.
+Install the library from [NuGet](https://www.nuget.org/packages/MinimalValidation):
+``` console
+❯ dotnet add package MinimalValidation --prerelease
+```
 
 ## Example usage
 
