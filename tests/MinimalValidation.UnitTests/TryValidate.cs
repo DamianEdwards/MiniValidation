@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using Xunit;
 
@@ -5,6 +6,17 @@ namespace MinimalValidationUnitTests;
 
 public class TryValidate
 {
+#nullable disable
+    [Fact]
+    public void Throws_ANE_For_Null_Target()
+    {
+        TestType thingToValidate = null;
+
+        Assert.Throws<ArgumentNullException>(() =>
+            MinimalValidation.TryValidate(thingToValidate, out var errors));
+    }
+#nullable enable
+
     [Fact]
     public void RequiredValidator_Invalid_When_Null()
     {

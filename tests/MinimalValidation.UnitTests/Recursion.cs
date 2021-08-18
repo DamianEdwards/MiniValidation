@@ -6,6 +6,18 @@ namespace MinimalValidationUnitTests;
 public class Recursion
 {
     [Fact]
+    public void Does_Not_Recurse_When_Top_Level_Is_Invalid()
+    {
+        var thingToValidate = new TestType { RequiredName = null, Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Collection(errors, entry => Assert.Equal($"{nameof(TestType.RequiredName)}", entry.Key));
+    }
+
+    [Fact]
     public void Invalid_When_Child_Invalid_And_Recurse_True()
     {
         var thingToValidate = new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
