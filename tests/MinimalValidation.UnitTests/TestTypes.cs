@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-
-namespace MinimalValidationUnitTests;
+﻿namespace MinimalValidationUnitTests;
 
 class TestType
 {

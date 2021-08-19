@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Xunit;
-
-namespace MinimalValidationUnitTests;
+﻿namespace MinimalValidationUnitTests;
 
 public class Recursion
 {
