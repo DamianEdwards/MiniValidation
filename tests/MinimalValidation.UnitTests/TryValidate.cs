@@ -100,4 +100,62 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(2, errors.Count);
     }
+
+    [Fact]
+    public void List_Invalid_When_Entry_Invalid()
+    {
+        var collectionToValidate = new List<TestType> { new TestType { RequiredName = null } };
+
+        var result = MinimalValidation.TryValidate(collectionToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+
+    public static IEnumerable<object?[]> PrimitiveValues
+        => new object?[][] {
+        new object[] { "A string" },
+        new object[] { 'c' },
+        new object[] { 100 },
+        new object[] { 100.2 },
+        new object[] { 100.2m },
+        new object[] { (long)100 },
+        new object[] { true },
+        new object[] { new DateTime(2021, 01, 01) },
+        new object[] { new DateTimeOffset(2021, 01, 01, 0, 0, 0, TimeSpan.FromHours(1)) },
+        new object[] { StringComparison.OrdinalIgnoreCase },
+        new object?[] { new int?(1) },
+    };
+
+    [Theory]
+    [MemberData(nameof(PrimitiveValues))]
+    public void Valid_When_Target_Is_Not_Complex(object thingToValidate)
+    {
+        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void Struct_Valid_When_Valid()
+    {
+        var thingToValidate = new TestStruct();
+
+        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void Struct_Invalid_When_Invalid()
+    {
+        var thingToValidate = new TestStruct { RequiredName = null };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
 }

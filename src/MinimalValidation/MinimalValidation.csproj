@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Description>A minimal validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
     <Authors>Damian Edwards</Authors>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
     <VersionSuffix Condition="'$(BuildNumber)' != ''">pre-$(BuildNumber)</VersionSuffix>
-    <TargetFrameworks>netstandard2.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
     <Copyright>Copyright © Damian Edwards</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/DamianEdwards/MinimalValidation</PackageProjectUrl>

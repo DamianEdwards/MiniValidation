@@ -1,20 +1,49 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+using System.Runtime.CompilerServices;
+using MinimalValidationLib;
 
 namespace System.ComponentModel.DataAnnotations
 {
+    /// <summary>
+    /// Contains methods and properties for performing validation operations with <see cref="Validator"/> on objects whos properties
+    /// are decorated with <see cref="ValidationAttribute"/>s.
+    /// </summary>
     public static class MinimalValidation
     {
-        public static bool TryValidate<T>(T target, out IDictionary<string, string[]> errors) where T : class
+        private static readonly TypeDetailsCache _typeDetailsCache = new();
+
+        /// <summary>
+        /// Gets or sets the maximum depth allowed when validating an object with recursion enabled.
+        /// Defaults to 32.
+        /// </summary>
+        public static int MaxDepth { get; set; } = 32;
+
+        /// <summary>
+        /// Determines whether the specific object is valid. This method recursively validates descendant objects.
+        /// </summary>
+        /// <param name="target">The object to validate.</param>
+        /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+        /// <returns><c>true</c> if the target object validates; otherwise <c>false</c>.</returns>
+        public static bool TryValidate(object target, out IDictionary<string, string[]> errors)
         {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
             return TryValidate(target, recurse: true, out errors);
         }
 
-        public static bool TryValidate<T>(T target, bool recurse, out IDictionary<string, string[]> errors) where T : class
+        /// <summary>
+        /// Determines whether the specific object is valid using a value indicating whether to recursively validate descendant objects.
+        /// </summary>
+        /// <param name="target">The object to validate.</param>
+        /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on the target object are validated.</param>
+        /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+        /// <returns><c>true</c> if the target object validates; otherwise <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool TryValidate(object target, bool recurse, out IDictionary<string, string[]> errors)
         {
             if (target == null)
             {
@@ -28,69 +57,83 @@ namespace System.ComponentModel.DataAnnotations
             return isValid;
         }
 
-        private static int _maxDepth = 3; // Who'd ever need more than 3
-        private static ConcurrentDictionary<Type, PropertyInfo[]> _typeCache = new();
-
-        private static bool TryValidateImpl(object target, bool recurse, IDictionary<string, string[]> errors, Dictionary<object, bool?> validatedObjects, string prefix = "", int currentDepth = 0)
+        private static bool TryValidateImpl(
+            object target,
+            bool recurse,
+            IDictionary<string, string[]> errors,
+            Dictionary<object, bool?> validatedObjects,
+            string? prefix = null,
+            int currentDepth = 0)
         {
             if (validatedObjects.ContainsKey(target))
             {
                 var result = validatedObjects[target];
+                // If there's a null result it means this object is the one currently being validated
+                // so just skip this reference to it by returning true. If there is a result it means
+                // we already validated this object as part of this validation operation.
                 return !result.HasValue || result == true;
             }
 
+            // Add current target to tracking dictionary in null (validating) state
             validatedObjects.Add(target, null);
 
-            var validationContext = new ValidationContext(target);
-            var validationResults = new List<ValidationResult>();
+            var targetType = target.GetType();
+            var typeProperties = _typeDetailsCache.Get(targetType);
 
-            // Validate the simple properties on the target first (Validator.TryValidateObject is non-recursive)
-            var isValid = Validator.TryValidateObject(target, validationContext, validationResults, validateAllProperties: true);
+            var isValid = true;
 
-            var errorsList = new Dictionary<string, List<string>>();
-            foreach (var result in validationResults)
+            var propertiesToRecurse = recurse ? new List<PropertyDetails>() : null;
+
+            foreach (var property in typeProperties)
             {
-                foreach (var name in result.MemberNames)
+                if (property.HasValidationAttribute)
                 {
-                    List<string> fieldErrors;
-                    if (errorsList.ContainsKey(name))
+                    var validationContext = new ValidationContext(target) { MemberName = property.PropertyInfo.Name };
+                    var validationResults = new List<ValidationResult>();
+                    var propertyValue = property.PropertyInfo.GetValue(target);
+                    var propertyIsValid = Validator.TryValidateProperty(propertyValue, validationContext, validationResults);
+                    if (!propertyIsValid)
                     {
-                        fieldErrors = errorsList[name];
+                        ProcessValidationResults(property.PropertyInfo.Name, validationResults, errors, prefix);
+                        isValid = false;
                     }
-                    else
-                    {
-                        fieldErrors = new List<string>();
-                        errorsList.Add(name, fieldErrors);
-                    }
-                    if (!string.IsNullOrEmpty(result.ErrorMessage))
-                    {
-                        fieldErrors.Add(result.ErrorMessage);
-                    }
+                }
+                if (recurse && property.Recurse)
+                {
+                    propertiesToRecurse!.Add(property);
                 }
             }
 
-            foreach (var error in errorsList)
+            if (isValid && recurse && currentDepth <= MaxDepth)
             {
-                errors.Add($"{prefix}{error.Key}", error.Value.ToArray());
-            }
-
-            if (recurse && isValid && currentDepth < _maxDepth)
-            {
-                // Validate complex properties
-                var complexProperties = _typeCache.GetOrAdd(target.GetType(), t =>
-                        t.GetProperties().Where(p => IsComplexType(p.PropertyType)).ToArray());
-
-                foreach (var property in complexProperties)
+                // Validate IEnumerable
+                if (target is IEnumerable)
                 {
-                    var propertyName = property.Name;
-                    var propertyType = property.PropertyType;
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    isValid = TryValidateEnumerable(target, recurse, errors, validatedObjects, prefix, currentDepth);
+                }
 
-                    if (property.GetIndexParameters().Length == 0)
+                // Validate complex properties
+                if (isValid && propertiesToRecurse!.Count > 0)
+                {
+                    foreach (var property in propertiesToRecurse)
                     {
                         var propertyValue = property.GetValue(target);
+
                         if (propertyValue != null)
                         {
-                            isValid = TryValidateImpl(propertyValue, recurse, errors, validatedObjects, prefix: $"{propertyName}.", currentDepth + 1);
+                            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+                            if (property.IsEnumerable)
+                            {
+                                var thePrefix = $"{prefix}{property.PropertyInfo.Name}";
+                                isValid = TryValidateEnumerable(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth);
+                            }
+                            else
+                            {
+                                var thePrefix = $"{prefix}{property.PropertyInfo.Name}.";
+                                isValid = TryValidateImpl(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth + 1);
+                            }
                         }
 
                         if (!isValid)
@@ -98,48 +141,63 @@ namespace System.ComponentModel.DataAnnotations
                             break;
                         }
                     }
-
-                    if (typeof(IEnumerable).IsAssignableFrom(propertyType))
-                    {
-                        // Validate each instance in the collection
-                        if (property.GetValue(target) is IEnumerable items)
-                        {
-                            var index = 0;
-                            foreach (var item in items)
-                            {
-                                if (item is not object) continue;
-
-                                var itemPrefix = $"{propertyName}[{index}].";
-                                isValid = TryValidateImpl(item, recurse, errors, validatedObjects, prefix: itemPrefix, currentDepth + 1);
-
-                                if (!isValid)
-                                {
-                                    break;
-                                }
-                                index++;
-                            }
-                        }
-                    }
                 }
             }
 
+            // Update state of target in tracking dictionary
             validatedObjects[target] = isValid;
 
             return isValid;
         }
 
-        private static bool IsComplexType(Type type)
+        private static bool TryValidateEnumerable(
+            object target,
+            bool recurse,
+            IDictionary<string, string[]> errors,
+            Dictionary<object, bool?> validatedObjects,
+            string? prefix = null,
+            int currentDepth = 0)
         {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            var isValid = true;
+            if (target is IEnumerable items)
             {
-                // Nullable type, check if the nested type is complex
-                return IsComplexType(type.GetGenericArguments()[0]);
+                // Validate each instance in the collection
+                var index = 0;
+                foreach (var item in items)
+                {
+                    if (item is null) continue;
+
+                    var itemPrefix = $"{prefix}[{index}].";
+
+                    isValid = TryValidateImpl(item, recurse, errors, validatedObjects, prefix: itemPrefix, currentDepth + 1);
+
+                    if (!isValid)
+                    {
+                        break;
+                    }
+                    index++;
+                }
+            }
+            return isValid;
+        }
+
+        private static void ProcessValidationResults(string propertyName, ICollection<ValidationResult> validationResults, IDictionary<string, string[]> errors, string? prefix)
+        {
+            if (validationResults.Count == 0)
+            {
+                return;
             }
 
-            return !(type.IsPrimitive
-                || type.IsEnum
-                || type.Equals(typeof(string))
-                || type.Equals(typeof(decimal)));
+            var errorsList = new string[validationResults.Count];
+            var i = 0;
+
+            foreach (var result in validationResults)
+            {
+                errorsList[i] = result.ErrorMessage;
+                i++;
+            }
+
+            errors.Add($"{prefix}{propertyName}", errorsList);
         }
     }
 }
