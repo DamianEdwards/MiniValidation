@@ -193,7 +193,7 @@ namespace System.ComponentModel.DataAnnotations
 
             foreach (var result in validationResults)
             {
-                errorsList[i] = result.ErrorMessage;
+                errorsList[i] = result.ErrorMessage ?? "";
                 i++;
             }
 

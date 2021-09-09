@@ -70,8 +70,8 @@ namespace MinimalValidationLib
                 Visit(property.PropertyType, visited);
                 var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var properties) && properties.Length > 0;
                 var enumerableTypeHasProperties = enumerableType != null
-                    ? _cache.TryGetValue(enumerableType, out var enumProperties) && enumProperties.Length > 0
-                    : false;
+                    && _cache.TryGetValue(enumerableType, out var enumProperties)
+                    && enumProperties.Length > 0;
                 var recurse = enumerableTypeHasProperties || propertyTypeHasProperties;
 
                 if (recurse || hasValidationOnProperty)
@@ -87,8 +87,8 @@ namespace MinimalValidationLib
                 {
                     var property = propertiesToValidate[i];
                     var enumerableTypeHasProperties = property.EnumerableType != null
-                        ? _cache.TryGetValue(property.EnumerableType, out var enumProperties) && enumProperties.Length > 0
-                        : false;
+                        && _cache.TryGetValue(property.EnumerableType, out var enumProperties)
+                        && enumProperties.Length > 0;
                     var keepProperty = property.PropertyInfo.PropertyType != type || (hasValidatableProperties || enumerableTypeHasProperties);
                     if (!keepProperty)
                     {
