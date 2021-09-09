@@ -3,6 +3,10 @@ name: .NET Build/Test/Pack
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+    - '**/*.md'
+    - '**/*.gitignore'
+    - '**/*.gitattributes'
   pull_request:
     branches: [ main ]
 
@@ -23,10 +27,10 @@ jobs:
       run: dotnet restore
 
     - name: Set current date as env variable
-      run: echo "TODAY=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
     - name: Create build number
-      run: echo "BUILD_NUMBER=$TODAY.$GITHUB_RUN_ID.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+      run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
 
     - name: Build
       run: dotnet build --configuration Release --no-restore /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA
@@ -35,7 +39,7 @@ jobs:
       run: dotnet test --verbosity normal
 
     - name: Pack
-      run: dotnet pack --configuration Release --no-restore --include-symbols --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA
+      run: dotnet pack $GITHUB_WORKSPACE/src/MinimalValidation/MinimalValidation.csproj --configuration Release --no-restore --include-symbols --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA
 
     - name: Publish artifact
       uses: actions/upload-artifact@master
