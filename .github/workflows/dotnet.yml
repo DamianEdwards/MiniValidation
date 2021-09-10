@@ -7,7 +7,7 @@ on:
     - '**/*.md'
     - '**/*.gitignore'
     - '**/*.gitattributes'
-  pull_request:
+  workflow_dispatch:
     branches: [ main ]
 
 env:
