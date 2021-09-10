@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>A minimal validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
+    <Description>A minimalist validation library built atop the existing validation features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
     <Authors>Damian Edwards</Authors>
     <VersionPrefix>0.2.0</VersionPrefix>
     <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
@@ -12,7 +12,8 @@
     <PackageProjectUrl>https://github.com/DamianEdwards/MinimalValidation</PackageProjectUrl>
     <RepositoryUrl>https://github.com/DamianEdwards/MinimalValidation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>ComponentModel, DataAnnotations, validation</PackageTags>
+    <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
+    <DebugType>embedded</DebugType>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
