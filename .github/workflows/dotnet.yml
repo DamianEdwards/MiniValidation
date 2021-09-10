@@ -36,13 +36,13 @@ jobs:
       run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA
+      run: dotnet build --configuration Release --no-restore /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
 
     - name: Test
       run: dotnet test --verbosity normal
 
     - name: Pack
-      run: dotnet pack $GITHUB_WORKSPACE/src/MinimalValidation/MinimalValidation.csproj --configuration Release --no-restore --include-symbols --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA
+      run: dotnet pack $GITHUB_WORKSPACE/src/MinimalValidation/MinimalValidation.csproj --configuration Release --no-build --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
 
     - name: Publish artifact
       uses: actions/upload-artifact@master
