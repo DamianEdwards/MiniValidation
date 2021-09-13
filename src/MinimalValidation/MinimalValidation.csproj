@@ -13,6 +13,7 @@
     <RepositoryUrl>https://github.com/DamianEdwards/MinimalValidation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
@@ -20,6 +21,10 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>
