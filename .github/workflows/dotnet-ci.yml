@@ -1,0 +1,40 @@
+name: .NET Build/Test all branches/PRs
+
+on:
+  push:
+  pull_request:
+    paths-ignore:
+    - '**/*.md'
+    - '**/*.gitignore'
+    - '**/*.gitattributes'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build, test, and pack
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v1
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Set current date as env variable
+      run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
+
+    - name: Create build number
+      run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore /p:VersionSuffix=ci /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
+
+    - name: Test
+      run: dotnet test --verbosity normal
+
+    - name: Pack
+      run: dotnet pack --no-build --configuration Release --verbosity d /p:VersionSuffix=ci /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
