@@ -9,6 +9,7 @@ namespace MinimalValidationLib
 {
     internal class TypeDetailsCache
     {
+        private static readonly PropertyDetails[] _emptyPropertyDetails = new PropertyDetails[0];
         private readonly ConcurrentDictionary<Type, PropertyDetails[]> _cache = new();
 
         public PropertyDetails[] Get(Type type)
@@ -39,7 +40,7 @@ namespace MinimalValidationLib
                 return;
             }
 
-            var propertiesToValidate = new List<PropertyDetails>();
+            List<PropertyDetails>? propertiesToValidate = null;
             var hasPropertiesOfOwnType = false;
             var hasValidatableProperties = false;
 
@@ -52,6 +53,7 @@ namespace MinimalValidationLib
                 }
 
                 var hasValidationOnProperty = property.GetCustomAttributes().OfType<ValidationAttribute>().Any();
+                var hasSkipRecursionOnProperty = property.GetCustomAttributes().OfType<SkipRecursionAttribute>().Any();
                 var enumerableType = GetEnumerableType(property.PropertyType);
                 if (enumerableType != null)
                 {
@@ -60,8 +62,9 @@ namespace MinimalValidationLib
 
                 // Defer fully checking properties that are of the same type we're currently building the cache for.
                 // We'll remove them at the end if any other validatable properties are present.
-                if (type == property.PropertyType)
+                if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
+                    propertiesToValidate ??= new List<PropertyDetails>();
                     propertiesToValidate.Add(new (property, hasValidationOnProperty, true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
@@ -72,16 +75,17 @@ namespace MinimalValidationLib
                 var enumerableTypeHasProperties = enumerableType != null
                     && _cache.TryGetValue(enumerableType, out var enumProperties)
                     && enumProperties.Length > 0;
-                var recurse = enumerableTypeHasProperties || propertyTypeHasProperties;
+                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties) && !hasSkipRecursionOnProperty;
 
                 if (recurse || hasValidationOnProperty)
                 {
+                    propertiesToValidate ??= new List<PropertyDetails>();
                     propertiesToValidate.Add(new(property, hasValidationOnProperty, recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
                 }
             }
 
-            if (hasPropertiesOfOwnType)
+            if (hasPropertiesOfOwnType && propertiesToValidate != null)
             {
                 for (int i = propertiesToValidate.Count - 1; i >= 0; i--)
                 {
@@ -97,7 +101,7 @@ namespace MinimalValidationLib
                 }
             }
 
-            _cache[type] = propertiesToValidate.ToArray();
+            _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
         }
 
         private static Type? GetEnumerableType(Type type)

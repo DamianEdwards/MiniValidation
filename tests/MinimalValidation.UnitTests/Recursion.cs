@@ -48,6 +48,17 @@ public class Recursion
     }
 
     [Fact]
+    public void Valid_When_Child_Invalid_And_Property_Decorated_With_SkipRecursion()
+    {
+        var thingToValidate = new TestType { SkippedChild = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
     public void Invalid_When_Enumerable_Item_Invalid_When_Recurse_Default()
     {
         var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
@@ -80,9 +91,9 @@ public class Recursion
     }
 
     [Fact]
-    public void Valid_When_Enumerable_Item_Valid_When_Recurse_True()
+    public void Valid_When_Enumerable_Item_Has_Invalid_Descendant_But_Property_Decorated_With_SkipRecursion()
     {
-        var thingToValidate = new List<TestType> { new TestType() };
+        var thingToValidate = new List<TestType> { new TestType { SkippedChild = new() { RequiredCategory = null } } };
 
         var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out _);
 
@@ -188,5 +199,29 @@ public class Recursion
         Assert.Collection(errors,
             entry => Assert.Equal($"{nameof(TestType.Children)}[1].{nameof(TestChildType.RequiredCategory)}", entry.Key),
             entry => Assert.Equal($"{nameof(TestType.Children)}[1].{nameof(TestChildType.MinLengthFive)}", entry.Key));
+    }
+
+    [Fact]
+    public void Valid_When_Descendant_Invalid_And_Property_Decorated_With_SkipRecursion()
+    {
+        var thingToValidate = new TestType();
+        thingToValidate.Children.Add(new());
+        thingToValidate.Children.Add(new() { SkippedChild = new() { RequiredCategory = null } });
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void Invalid_When_Descendant_Invalid_And_Property_Is_Required_And_Decorated_With_SkipRecursion()
+    {
+        var thingToValidate = new TestSkippedChildType();
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
     }
 }
