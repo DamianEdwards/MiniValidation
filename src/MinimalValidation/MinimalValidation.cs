@@ -91,7 +91,7 @@ namespace System.ComponentModel.DataAnnotations
                     var validationContext = new ValidationContext(target) { MemberName = property.Name };
                     var validationResults = new List<ValidationResult>();
                     var propertyValue = property.GetValue(target);
-                    var propertyIsValid = Validator.TryValidateValue(propertyValue, validationContext, validationResults, property.ValidationAttributes);
+                    var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
                     if (!propertyIsValid)
                     {
                         ProcessValidationResults(property.Name, validationResults, errors, prefix);
