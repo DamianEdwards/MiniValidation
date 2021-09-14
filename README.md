@@ -90,6 +90,14 @@ app.MapPost("/widgets", (Widget widget) =>
         ? Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 
+app.MapPost("/widgets-validated", (Validated<Widget> input) =>
+{
+    var (widget, isValid, errors) = input;
+    return !isValid
+        ? Results.BadRequest(errors)
+        : Results.Created($"/widgets/{widget.Name}", widget);
+});
+
 app.Run();
 
 class Widget
