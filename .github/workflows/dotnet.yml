@@ -44,6 +44,9 @@ jobs:
     - name: Pack
       run: dotnet pack $GITHUB_WORKSPACE/src/MinimalValidation/MinimalValidation.csproj --configuration Release --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
 
+    - name: Pack AspNetCore
+      run: dotnet pack $GITHUB_WORKSPACE/src/MinimalValidation.AspNetCore/MinimalValidation.AspNetCore.csproj --configuration Release --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
+
     - name: Publish artifact
       uses: actions/upload-artifact@master
       with:
