@@ -52,7 +52,8 @@ namespace MinimalValidationLib
                     continue;
                 }
 
-                var hasValidationOnProperty = property.GetCustomAttributes().OfType<ValidationAttribute>().Any();
+                var validationAttributes = property.GetCustomAttributes().OfType<ValidationAttribute>();
+                var hasValidationOnProperty = validationAttributes.Any();
                 var hasSkipRecursionOnProperty = property.GetCustomAttributes().OfType<SkipRecursionAttribute>().Any();
                 var enumerableType = GetEnumerableType(property.PropertyType);
                 if (enumerableType != null)
@@ -65,7 +66,7 @@ namespace MinimalValidationLib
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new (property, hasValidationOnProperty, true, enumerableType));
+                    propertiesToValidate.Add(new (property.Name, property, validationAttributes.ToArray(), true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
                 }
@@ -80,13 +81,14 @@ namespace MinimalValidationLib
                 if (recurse || hasValidationOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property, hasValidationOnProperty, recurse, enumerableTypeHasProperties ? enumerableType : null));
+                    propertiesToValidate.Add(new(property.Name, property, validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
                 }
             }
 
             if (hasPropertiesOfOwnType && propertiesToValidate != null)
             {
+                // Remove properties of same type if there's nothing to validate on them
                 for (int i = propertiesToValidate.Count - 1; i >= 0; i--)
                 {
                     var property = propertiesToValidate[i];
@@ -124,10 +126,11 @@ namespace MinimalValidationLib
         }
     }
 
-    internal record PropertyDetails(PropertyInfo PropertyInfo, bool HasValidationAttribute, bool Recurse, Type? EnumerableType)
+    internal record PropertyDetails(string Name, PropertyInfo PropertyInfo, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
     {
         // TODO: Replace this with cached property getter (aka FastPropertyGetter)
         public object? GetValue(object target) => PropertyInfo.GetValue(target);
         public bool IsEnumerable => EnumerableType != null;
+        public bool HasValidationAttributes => ValidationAttributes.Length > 0;
     }
 }

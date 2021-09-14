@@ -86,15 +86,15 @@ namespace System.ComponentModel.DataAnnotations
 
             foreach (var property in typeProperties)
             {
-                if (property.HasValidationAttribute)
+                if (property.HasValidationAttributes)
                 {
-                    var validationContext = new ValidationContext(target) { MemberName = property.PropertyInfo.Name };
+                    var validationContext = new ValidationContext(target) { MemberName = property.Name };
                     var validationResults = new List<ValidationResult>();
-                    var propertyValue = property.PropertyInfo.GetValue(target);
-                    var propertyIsValid = Validator.TryValidateProperty(propertyValue, validationContext, validationResults);
+                    var propertyValue = property.GetValue(target);
+                    var propertyIsValid = Validator.TryValidateValue(propertyValue, validationContext, validationResults, property.ValidationAttributes);
                     if (!propertyIsValid)
                     {
-                        ProcessValidationResults(property.PropertyInfo.Name, validationResults, errors, prefix);
+                        ProcessValidationResults(property.Name, validationResults, errors, prefix);
                         isValid = false;
                     }
                 }
@@ -126,12 +126,12 @@ namespace System.ComponentModel.DataAnnotations
 
                             if (property.IsEnumerable)
                             {
-                                var thePrefix = $"{prefix}{property.PropertyInfo.Name}";
+                                var thePrefix = $"{prefix}{property.Name}";
                                 isValid = TryValidateEnumerable(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth);
                             }
                             else
                             {
-                                var thePrefix = $"{prefix}{property.PropertyInfo.Name}.";
+                                var thePrefix = $"{prefix}{property.Name}.";
                                 isValid = TryValidateImpl(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth + 1);
                             }
                         }
