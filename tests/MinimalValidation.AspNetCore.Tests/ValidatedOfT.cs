@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Moq;
 
@@ -15,10 +16,7 @@ namespace MinimalValidation.AspNetCore.Tests
         [InlineData("{\"name\":\"Test Value\"}")]
         public async Task BindAsync_Returns_Valid_Object_For_Valid_Json(string jsonBody)
         {
-            var (httpContext, httpRequest, serviceProvider) = CreateMockHttpContext();
-            var requestBody = Encoding.UTF8.GetBytes(jsonBody);
-            httpRequest.SetupGet(x => x.ContentLength).Returns(requestBody.Length);
-            httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream(requestBody));
+            var (httpContext, _, _, _) = CreateMockHttpContext(jsonBody);
             var parameterInfo = new Mock<ParameterInfo>();
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
@@ -36,10 +34,7 @@ namespace MinimalValidation.AspNetCore.Tests
         [InlineData("{}", 1)]
         public async Task BindAsync_Returns_Invalid_Object_For_Invalid_Json(string jsonBody, int expectedErrorCount)
         {
-            var (httpContext, httpRequest, serviceProvider) = CreateMockHttpContext();
-            var requestBody = Encoding.UTF8.GetBytes(jsonBody);
-            httpRequest.SetupGet(x => x.ContentLength).Returns(requestBody.Length);
-            httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream(requestBody));
+            var (httpContext, _, _, _) = CreateMockHttpContext(jsonBody);
             var parameterInfo = new Mock<ParameterInfo>();
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
@@ -54,10 +49,19 @@ namespace MinimalValidation.AspNetCore.Tests
         [Fact]
         public async Task BindAsync_Returns_Null_For_Null_Request_Body()
         {
-            var (httpContext, httpRequest, serviceProvider) = CreateMockHttpContext();
-            var requestBody = Encoding.UTF8.GetBytes("null");
-            httpRequest.SetupGet(x => x.ContentLength).Returns(requestBody.Length);
-            httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream(requestBody));
+            var (httpContext, _, _, _) = CreateMockHttpContext("null");
+            var parameterInfo = new Mock<ParameterInfo>();
+
+            var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
+
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task BindAsync_Returns_Null_For_Request_With_No_Body()
+        {
+            var (httpContext, _, httpRequest, _) = CreateMockHttpContext();
+            httpRequest.SetupGet(x => x.ContentType).Returns("application/json");
             var parameterInfo = new Mock<ParameterInfo>();
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
@@ -68,8 +72,22 @@ namespace MinimalValidation.AspNetCore.Tests
         [Fact]
         public async Task BindAsync_Throws_BadRequestException_For_Non_Json_Request()
         {
-            var (httpContext, httpRequest, serviceProvider) = CreateMockHttpContext();
+            var (httpContext, _, httpRequest, _) = CreateMockHttpContext("some text");
             httpRequest.SetupGet(x => x.ContentType).Returns("text/plain");
+            var parameterInfo = new Mock<ParameterInfo>();
+
+            await Assert.ThrowsAsync<BadHttpRequestException>(async () =>
+            {
+                var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
+            });
+        }
+
+        [Fact]
+        public async Task BindAsync_Throws_BadRequestException_For_Empty_Json_Request()
+        {
+            var (httpContext, _, httpRequest, _) = CreateMockHttpContext("{}");
+            httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream());
+
             var parameterInfo = new Mock<ParameterInfo>();
 
             await Assert.ThrowsAsync<BadHttpRequestException>(async () =>
@@ -81,11 +99,10 @@ namespace MinimalValidation.AspNetCore.Tests
         [Fact]
         public async Task BindAsync_Uses_JsonOptions_From_DI()
         {
-            var (httpContext, httpRequest, serviceProvider) = CreateMockHttpContext();
+            var (httpContext, features, httpRequest, serviceProvider) = CreateMockHttpContext("{\"name\":\"test\"}");
             var jsonOptions = new JsonOptions();
             var suffix = DateTime.UtcNow.Ticks.ToString();
             jsonOptions.SerializerOptions.Converters.Add(new AppendToStringJsonConverter(suffix));
-            httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes("{\"name\":\"test\"}")));
             serviceProvider.Setup(x => x.GetService(typeof(JsonOptions))).Returns(jsonOptions);
             var parameterInfo = new Mock<ParameterInfo>();
 
@@ -98,20 +115,32 @@ namespace MinimalValidation.AspNetCore.Tests
             Assert.Equal($"test{suffix}", result.Value.Name);
         }
 
-        private (Mock<HttpContext>, Mock<HttpRequest>, Mock<IServiceProvider>) CreateMockHttpContext()
+        private (Mock<HttpContext>, Mock<IFeatureCollection>, Mock<HttpRequest>, Mock<IServiceProvider>) CreateMockHttpContext(string? requestBody = null)
         {
             var httpContext = new Mock<HttpContext>();
+            var features = new Mock<IFeatureCollection>();
             var httpRequest = new Mock<HttpRequest>();
             var serviceProvider = new Mock<IServiceProvider>();
 
-            httpRequest.SetupGet(x => x.Method).Returns("GET");
-            httpRequest.SetupGet(x => x.ContentType).Returns("application/json");
+            httpRequest.SetupGet(x => x.Method).Returns("POST");
             httpRequest.SetupGet(x => x.HttpContext).Returns(httpContext.Object);
+            httpContext.SetupGet(x => x.Features).Returns(features.Object);
             httpContext.SetupGet(x => x.Request).Returns(httpRequest.Object);
             httpContext.SetupGet(x => x.RequestAborted).Returns(CancellationToken.None);
             httpContext.SetupGet(x => x.RequestServices).Returns(serviceProvider.Object);
 
-            return (httpContext, httpRequest, serviceProvider);
+            if (requestBody != null)
+            {
+                var bodyDetectionFeature = new Mock<IHttpRequestBodyDetectionFeature>();
+                var bodyBytes = Encoding.UTF8.GetBytes(requestBody);
+                bodyDetectionFeature.SetupGet(x => x.CanHaveBody).Returns(true);
+                features.Setup(x => x.Get<IHttpRequestBodyDetectionFeature>()).Returns(bodyDetectionFeature.Object);
+                httpRequest.SetupGet(x => x.ContentType).Returns("application/json");
+                httpRequest.SetupGet(x => x.ContentLength).Returns(bodyBytes.Length);
+                httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream(bodyBytes));
+            }
+
+            return (httpContext, features, httpRequest, serviceProvider);
         }
 
         private class TestType

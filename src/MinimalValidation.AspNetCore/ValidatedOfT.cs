@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -84,18 +85,31 @@ public class Validated<TValue>
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(parameter, nameof(parameter));
 
-        if (!context.Request.HasJsonContentType())
+        TValue? value = default;
+
+        var feature = context.Features.Get<IHttpRequestBodyDetectionFeature>();
+        if (feature?.CanHaveBody == true)
         {
-            throw new BadHttpRequestException(
-                "Request Content-Type header was not a recognized JSON media type.",
-                StatusCodes.Status415UnsupportedMediaType);
+            if (!context.Request.HasJsonContentType())
+            {
+                throw new BadHttpRequestException(
+                    "Request Content-Type header was not a recognized JSON media type.",
+                    StatusCodes.Status415UnsupportedMediaType);
+            }
+
+            var jsonOptions = context.RequestServices.GetService<JsonOptions>();
+            var jsonSerializerOptions = jsonOptions?.SerializerOptions ?? _defaultJsonSerializerOptions;
+
+            try
+            {
+                value = (TValue?)await context.Request.ReadFromJsonAsync(typeof(TValue), jsonSerializerOptions, context.RequestAborted);
+            }
+            catch (JsonException ex)
+            {
+                throw new BadHttpRequestException(ex.Message, StatusCodes.Status400BadRequest, ex);
+            }
         }
 
-        var jsonOptions = context.RequestServices.GetService<JsonOptions>();
-        var jsonSerializerOptions = jsonOptions?.SerializerOptions ?? _defaultJsonSerializerOptions;
-
-        var value = await context.Request.ReadFromJsonAsync(typeof(TValue), jsonSerializerOptions, context.RequestAborted);
-
-        return value == null ? null : new Validated<TValue>((TValue)value);
+        return value == null ? null : new Validated<TValue>(value);
     }
 }
