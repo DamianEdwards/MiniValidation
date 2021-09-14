@@ -1,15 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
 
 app.MapGet("/", () => "Hello World");
 
@@ -26,6 +18,14 @@ app.MapPost("/widgets", (Widget widget) =>
     !MinimalValidation.TryValidate(widget, out var errors)
         ? Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
+
+app.MapPost("/widgets-validated", (Validated<Widget> input) =>
+{
+    var (widget, isValid, errors) = input;
+    return !isValid
+        ? Results.BadRequest(errors)
+        : Results.Created($"/widgets/{widget.Name}", widget);
+});
 
 app.Run();
 

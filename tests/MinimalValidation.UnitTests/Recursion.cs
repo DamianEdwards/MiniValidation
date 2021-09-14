@@ -73,8 +73,8 @@ public class Recursion
     public void Valid_When_Enumerable_Item_Invalid_When_Recurse_False()
     {
         var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
-
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out _);
 
         Assert.True(result);
     }
@@ -84,7 +84,7 @@ public class Recursion
     {
         var thingToValidate = new List<TestType> { new TestType() };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out _);
 
         Assert.True(result);
     }
