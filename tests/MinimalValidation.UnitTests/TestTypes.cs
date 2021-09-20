@@ -20,7 +20,7 @@ class TestType
 class TestChildType
 {
     [Required]
-    public string? RequiredCategory { get; set; } = "Default";
+    public virtual string? RequiredCategory { get; set; } = "Default";
 
     [MinLength(5)]
     public string? MinLengthFive { get; set; } = "Default";
@@ -45,6 +45,14 @@ class TestChildType
             }
         }
     }
+}
+
+class TestChildTypeDerivative : TestChildType
+{
+    public override string? RequiredCategory { get; set; } = "Derived Default";
+
+    [MinLength(10)]
+    public string? DerivedMinLengthTen { get; set; } = "1234567890";
 }
 
 class TestSkippedChildType

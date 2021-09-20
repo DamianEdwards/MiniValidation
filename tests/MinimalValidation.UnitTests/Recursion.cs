@@ -224,4 +224,37 @@ public class Recursion
         Assert.False(result);
         Assert.Equal(1, errors.Count);
     }
+
+    [Fact]
+    public void Invalid_When_Derived_Type_Has_Invalid_Inherited_Property()
+    {
+        var thingToValidate = new TestType { Child = new TestChildTypeDerivative { RequiredCategory = null } };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+
+    [Fact]
+    public void Invalid_When_Derived_Type_Has_Invalid_Own_Property()
+    {
+        var thingToValidate = new TestType { Child = new TestChildTypeDerivative { DerivedMinLengthTen = "123" } };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+
+    [Fact]
+    public void Valid_When_Derived_Type_Has_Invalid_Own_Property_With_Recurse_False()
+    {
+        var thingToValidate = new TestType { Child = new TestChildTypeDerivative { DerivedMinLengthTen = "123" } };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
 }

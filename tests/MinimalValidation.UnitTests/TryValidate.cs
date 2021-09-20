@@ -80,7 +80,18 @@ public class TryValidate
     }
 
     [Fact]
-    public void MultipleValidators_Invalid_When_One_Invalid()
+    public void MultipleValidators_Invalid_When_First_Invalid()
+    {
+        var thingToValidate = new TestType { RequiredName = null, TenOrMore = 11 };
+
+        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+
+    [Fact]
+    public void MultipleValidators_Invalid_When_One_Other_Than_First_Invalid()
     {
         var thingToValidate = new TestType { RequiredName = "test", TenOrMore = 5 };
 
