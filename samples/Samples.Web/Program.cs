@@ -15,7 +15,7 @@ app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
 app.MapPost("/widgets", (Widget widget) =>
-    !MinimalValidation.TryValidate(widget, out var errors)
+    !MiniValidation.TryValidate(widget, out var errors)
         ? Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 

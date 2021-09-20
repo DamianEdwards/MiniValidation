@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31613.370
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{751FE268-A797-46FE-AEE0-BD35D91BE850}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MinimalValidation", "src\MinimalValidation\MinimalValidation.csproj", "{60C03B53-10AC-4D37-BA95-7EEFE2FC61FC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation", "src\MiniValidation\MiniValidation.csproj", "{60C03B53-10AC-4D37-BA95-7EEFE2FC61FC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{BF473532-A97B-4CEE-9673-9D4B57D8C1C4}"
 EndProject
@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Web", "samples\Samp
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4CF82AD1-D050-422E-99D5-454AE28D6A11}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MinimalValidation.UnitTests", "tests\MinimalValidation.UnitTests\MinimalValidation.UnitTests.csproj", "{4D247E44-6CF5-4A15-A2D3-09E40753874B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.UnitTests", "tests\MiniValidation.UnitTests\MiniValidation.UnitTests.csproj", "{4D247E44-6CF5-4A15-A2D3-09E40753874B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{49CE073E-74D6-40FC-8D9D-6FEA3946B1C9}"
 EndProject
@@ -24,9 +24,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MinimalValidation.AspNetCore", "src\MinimalValidation.AspNetCore\MinimalValidation.AspNetCore.csproj", "{7F14C946-632D-45E3-BFB6-80A5B51B4C5D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.AspNetCore", "src\MiniValidation.AspNetCore\MiniValidation.AspNetCore.csproj", "{7F14C946-632D-45E3-BFB6-80A5B51B4C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MinimalValidation.AspNetCore.Tests", "tests\MinimalValidation.AspNetCore.Tests\MinimalValidation.AspNetCore.Tests.csproj", "{899DC54F-4A1A-4D98-B27C-C6C5E2EAEA2C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniValidation.AspNetCore.Tests", "tests\MiniValidation.AspNetCore.Tests\MiniValidation.AspNetCore.Tests.csproj", "{899DC54F-4A1A-4D98-B27C-C6C5E2EAEA2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

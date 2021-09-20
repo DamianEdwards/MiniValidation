@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>ASP.NET Core extensions for MinimalValidation.</Description>
+    <Description>ASP.NET Core extensions for MiniValidation.</Description>
     <Authors>Damian Edwards</Authors>
     <VersionPrefix>0.2.0</VersionPrefix>
     <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
@@ -9,8 +9,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <Copyright>Copyright © Damian Edwards</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/DamianEdwards/MinimalValidation</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/DamianEdwards/MinimalValidation</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DamianEdwards/MiniValidation</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DamianEdwards/MiniValidation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ComponentModel DataAnnotations validation ASP.NET</PackageTags>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MinimalValidation\MinimalValidation.csproj" />
+    <ProjectReference Include="..\MiniValidation\MiniValidation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

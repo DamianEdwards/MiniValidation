@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using MinimalValidationLib;
+using MiniValidationLib;
 
 namespace System.ComponentModel.DataAnnotations
 {
@@ -9,7 +9,7 @@ namespace System.ComponentModel.DataAnnotations
     /// Contains methods and properties for performing validation operations with <see cref="Validator"/> on objects whos properties
     /// are decorated with <see cref="ValidationAttribute"/>s.
     /// </summary>
-    public static class MinimalValidation
+    public static class MiniValidation
     {
         private static readonly TypeDetailsCache _typeDetailsCache = new();
 

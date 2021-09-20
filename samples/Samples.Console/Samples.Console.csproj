@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MinimalValidation\MinimalValidation.csproj" />
+    <ProjectReference Include="..\..\src\MiniValidation\MiniValidation.csproj" />
   </ItemGroup>
 
 </Project>

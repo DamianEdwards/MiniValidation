@@ -1,4 +1,4 @@
-namespace MinimalValidationUnitTests;
+namespace MiniValidationUnitTests;
 
 public class TryValidate
 {
@@ -9,7 +9,7 @@ public class TryValidate
         TestType thingToValidate = null;
 
         Assert.Throws<ArgumentNullException>(() =>
-            MinimalValidation.TryValidate(thingToValidate, out var errors));
+            MiniValidation.TryValidate(thingToValidate, out var errors));
     }
 #nullable enable
 
@@ -18,7 +18,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = null };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.RequiredName), entry.Key));
@@ -29,7 +29,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = string.Empty };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.RequiredName), entry.Key));
@@ -40,7 +40,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = "test" };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -51,7 +51,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { TenOrMore = 5 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.TenOrMore), entry.Key));
@@ -62,7 +62,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { TenOrMore = 11 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -73,7 +73,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = "test", TenOrMore = 11 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -84,7 +84,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = null, TenOrMore = 11 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -95,7 +95,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = "test", TenOrMore = 5 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -106,7 +106,7 @@ public class TryValidate
     {
         var thingToValidate = new TestType { RequiredName = null, TenOrMore = 5 };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -117,7 +117,7 @@ public class TryValidate
     {
         var collectionToValidate = new List<TestType> { new TestType { RequiredName = null } };
 
-        var result = MinimalValidation.TryValidate(collectionToValidate, out var errors);
+        var result = MiniValidation.TryValidate(collectionToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -142,7 +142,7 @@ public class TryValidate
     [MemberData(nameof(PrimitiveValues))]
     public void Valid_When_Target_Is_Not_Complex(object thingToValidate)
     {
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -153,7 +153,7 @@ public class TryValidate
     {
         var thingToValidate = new TestStruct();
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -164,7 +164,7 @@ public class TryValidate
     {
         var thingToValidate = new TestStruct { RequiredName = null };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);

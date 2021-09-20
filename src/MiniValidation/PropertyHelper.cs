@@ -6,7 +6,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace MinimalValidationLib
+namespace MiniValidationLib
 {
     internal static class PropertyHelper
     {

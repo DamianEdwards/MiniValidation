@@ -1,4 +1,4 @@
-﻿namespace MinimalValidationUnitTests;
+﻿namespace MiniValidationUnitTests;
 
 class TestType
 {

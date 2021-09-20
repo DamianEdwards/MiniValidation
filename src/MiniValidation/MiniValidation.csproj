@@ -9,8 +9,8 @@
     <TargetFrameworks>netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
     <Copyright>Copyright © Damian Edwards</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/DamianEdwards/MinimalValidation</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/DamianEdwards/MinimalValidation</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DamianEdwards/MiniValidation</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DamianEdwards/MiniValidation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

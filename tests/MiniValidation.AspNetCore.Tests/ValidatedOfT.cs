@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Moq;
 
-namespace MinimalValidation.AspNetCore.Tests
+namespace MiniValidation.AspNetCore.Tests
 {
     public class ValidatedOfT
     {

@@ -27,7 +27,7 @@ public class Validated<TValue>
         ArgumentNullException.ThrowIfNull(value, nameof(value));
 
         Value = value;
-        IsValid = MinimalValidation.TryValidate(Value, out var errors);
+        IsValid = MiniValidation.TryValidate(Value, out var errors);
         Errors = errors;
     }
 

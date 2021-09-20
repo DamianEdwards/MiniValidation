@@ -1,4 +1,4 @@
-﻿namespace MinimalValidationUnitTests;
+﻿namespace MiniValidationUnitTests;
 
 public class Recursion
 {
@@ -7,7 +7,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { RequiredName = null, Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -19,7 +19,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -30,7 +30,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildType { RequiredCategory = null } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -41,7 +41,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -52,7 +52,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { SkippedChild = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -63,7 +63,7 @@ public class Recursion
     {
         var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -74,7 +74,7 @@ public class Recursion
     {
         var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -85,7 +85,7 @@ public class Recursion
     {
         var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
         
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out _);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out _);
 
         Assert.True(result);
     }
@@ -95,7 +95,7 @@ public class Recursion
     {
         var thingToValidate = new List<TestType> { new TestType { SkippedChild = new() { RequiredCategory = null } } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out _);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out _);
 
         Assert.True(result);
     }
@@ -110,7 +110,7 @@ public class Recursion
 
         TestChildType.AddDescendents(thingToValidate.Child, maxDepth);
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -129,7 +129,7 @@ public class Recursion
             new TestType { RequiredName = null, TenOrMore = 5 },
         };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -145,7 +145,7 @@ public class Recursion
         thingToValidate.Children.Add(new() { });
         thingToValidate.Children.Add(new() { RequiredCategory = null });
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -162,7 +162,7 @@ public class Recursion
             new TestType { RequiredName = null },
         };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -177,7 +177,7 @@ public class Recursion
         thingToValidate.Children.Add(new() { MinLengthFive = "123" });
         thingToValidate.Children.Add(new() { RequiredCategory = null });
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -192,7 +192,7 @@ public class Recursion
         thingToValidate.Children.Add(new());
         thingToValidate.Children.Add(new() { RequiredCategory = null, MinLengthFive = "123" });
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(2, errors.Count);
@@ -208,7 +208,7 @@ public class Recursion
         thingToValidate.Children.Add(new());
         thingToValidate.Children.Add(new() { SkippedChild = new() { RequiredCategory = null } });
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);
@@ -219,7 +219,7 @@ public class Recursion
     {
         var thingToValidate = new TestSkippedChildType();
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -230,7 +230,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildTypeDerivative { RequiredCategory = null } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -241,7 +241,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildTypeDerivative { DerivedMinLengthTen = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: true, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
         Assert.Equal(1, errors.Count);
@@ -252,7 +252,7 @@ public class Recursion
     {
         var thingToValidate = new TestType { Child = new TestChildTypeDerivative { DerivedMinLengthTen = "123" } };
 
-        var result = MinimalValidation.TryValidate(thingToValidate, recurse: false, out var errors);
+        var result = MiniValidation.TryValidate(thingToValidate, recurse: false, out var errors);
 
         Assert.True(result);
         Assert.Equal(0, errors.Count);

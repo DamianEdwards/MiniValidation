@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 var title = args.Length > 0 ? args[0] : "";
 var widget = new Widget { Name = title };
 
-if (!MinimalValidation.TryValidate(widget, out var errors))
+if (!MiniValidation.TryValidate(widget, out var errors))
 {
     Console.WriteLine($"{nameof(Widget)} has errors!");
     foreach (var entry in errors)
