@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 
-namespace MinimalValidationLib
+namespace MiniValidationLib
 {
     internal class TypeDetailsCache
     {

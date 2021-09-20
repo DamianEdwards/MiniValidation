@@ -1,18 +1,18 @@
-# Minimal Validation
-A minimal validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace. Adds support for single-line validation calls and recursion with cycle detection.
+# MiniValidation
+A minimalistic validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace. Adds support for single-line validation calls and recursion with cycle detection.
 
 Supports .NET Standard 2.0 compliant runtimes.
 
 ## Installation
-Install the library from [NuGet](https://www.nuget.org/packages/MinimalValidation):
+Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ``` console
-❯ dotnet add package MinimalValidation --prerelease
+❯ dotnet add package MiniValidation --prerelease
 ```
 
 ### ASP.NET Core 6+ Projects
-If installing into an ASP.NET Core 6+ project, you can use the [MinimalValidation.AspNetCore]((https://www.nuget.org/packages/MinimalValidation.AspNetCore)) package instead, which adds extensions specific to ASP.NET Core:
+If installing into an ASP.NET Core 6+ project, you can use the [MiniValidation.AspNetCore]((https://www.nuget.org/packages/MiniValidation.AspNetCore)) package instead, which adds extensions specific to ASP.NET Core:
 ``` console
-❯ dotnet add package MinimalValidation.AspNetCore --prerelease
+❯ dotnet add package MiniValidation.AspNetCore --prerelease
 ```
 
 ## Example usage
@@ -25,7 +25,7 @@ using System.ComponentModel.DataAnnotations;
 var title = args.Length > 0 ? args[0] : "";
 var widget = new Widget { Name = title };
 
-if (!MinimalValidation.TryValidate(widget, out var errors))
+if (!MiniValidation.TryValidate(widget, out var errors))
 {
     Console.WriteLine($"{nameof(Widget)} has errors!");
     foreach (var entry in errors)
@@ -61,8 +61,8 @@ Widget has errors!
   Name:
   - The field Name must be a string or array type with a minimum length of '3'.
 
-❯ widget.exe MinimalValidation
-Widget 'MinimalValidation' is valid!
+❯ widget.exe MiniValidation
+Widget 'MiniValidation' is valid!
 ```
 
 ### Web app (.NET 6)
@@ -91,11 +91,13 @@ app.MapGet("/widgets", () =>
 app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
+// Example calling MiniValidation.TryValidate
 app.MapPost("/widgets", (Widget widget) =>
-    !MinimalValidation.TryValidate(widget, out var errors)
+    !MiniValidation.TryValidate(widget, out var errors)
         ? Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 
+// Example using Validated<T> paramater binder
 app.MapPost("/widgets-validated", (Validated<Widget> input) =>
 {
     var (widget, isValid, errors) = input;

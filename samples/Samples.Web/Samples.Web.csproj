@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MinimalValidation.AspNetCore\MinimalValidation.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\MiniValidation.AspNetCore\MiniValidation.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

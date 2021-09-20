@@ -4,13 +4,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <DefaultNamespace>MinimalValidationUnitTests</DefaultNamespace>
+    <DefaultNamespace>MiniValidationUnitTests</DefaultNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <Using Include="System.ComponentModel.DataAnnotations" />
     <Using Include="Xunit" />
-    <ProjectReference Include="..\..\src\MinimalValidation\MinimalValidation.csproj" />
+    <ProjectReference Include="..\..\src\MiniValidation\MiniValidation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
