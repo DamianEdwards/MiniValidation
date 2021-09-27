@@ -1,17 +1,26 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace MiniValidationLib.AspNetCore;
+namespace MiniValidation.AspNetCore;
 
 internal static class DefaultBinder<TValue>
 {
     private static object _itemsKey = new();
     private static readonly RequestDelegate _defaultRequestDelegate = RequestDelegateFactory.Create(DefaultValueDelegate).RequestDelegate;
 
-    public static async Task<TValue?> GetValueAsync(HttpContext httpContext)
+    public static async Task<(TValue?, int)> GetValueAsync(HttpContext httpContext)
     {
+        var originalStatusCode = httpContext.Response.StatusCode;
+
         await _defaultRequestDelegate(httpContext);
 
-        return (TValue?)httpContext.Items[_itemsKey];
+        if (originalStatusCode != httpContext.Response.StatusCode)
+        {
+            // Default binder ran and detected an issue
+            httpContext.Response.StatusCode = originalStatusCode;
+            return (default(TValue?), httpContext.Response.StatusCode);
+        }
+
+        return ((TValue?)httpContext.Items[_itemsKey], StatusCodes.Status200OK);
     }
 
     private static IResult DefaultValueDelegate(TValue value, HttpContext httpContext)
@@ -21,7 +30,7 @@ internal static class DefaultBinder<TValue>
         return FakeResult.Instance;
     }
 
-    class FakeResult : IResult
+    private class FakeResult : IResult
     {
         public static FakeResult Instance { get; } = new FakeResult();
 

@@ -1,15 +1,16 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
-using MiniValidationLib;
 
-namespace System.ComponentModel.DataAnnotations
+namespace MiniValidation
 {
     /// <summary>
     /// Contains methods and properties for performing validation operations with <see cref="Validator"/> on objects whos properties
     /// are decorated with <see cref="ValidationAttribute"/>s.
     /// </summary>
-    public static class MiniValidation
+    public static class MiniValidator
     {
         private static readonly TypeDetailsCache _typeDetailsCache = new();
 
@@ -62,6 +63,7 @@ namespace System.ComponentModel.DataAnnotations
             bool recurse,
             IDictionary<string, string[]> errors,
             Dictionary<object, bool?> validatedObjects,
+            List<ValidationResult>? validationResults = null,
             string? prefix = null,
             int currentDepth = 0)
         {
@@ -83,13 +85,14 @@ namespace System.ComponentModel.DataAnnotations
             var isValid = true;
 
             var propertiesToRecurse = recurse ? new List<PropertyDetails>() : null;
+            ValidationContext validationContext = new(target);
 
             foreach (var property in typeProperties)
             {
                 if (property.HasValidationAttributes)
                 {
-                    var validationContext = new ValidationContext(target) { MemberName = property.Name };
-                    var validationResults = new List<ValidationResult>();
+                    validationContext.MemberName = property.Name;
+                    validationResults ??= new();
                     var propertyValue = property.GetValue(target);
                     var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
                     if (!propertyIsValid)
@@ -110,7 +113,7 @@ namespace System.ComponentModel.DataAnnotations
                 if (target is IEnumerable)
                 {
                     RuntimeHelpers.EnsureSufficientExecutionStack();
-                    isValid = TryValidateEnumerable(target, recurse, errors, validatedObjects, prefix, currentDepth);
+                    isValid = TryValidateEnumerable(target, recurse, errors, validatedObjects, validationResults, prefix, currentDepth);
                 }
 
                 // Validate complex properties
@@ -127,12 +130,12 @@ namespace System.ComponentModel.DataAnnotations
                             if (property.IsEnumerable)
                             {
                                 var thePrefix = $"{prefix}{property.Name}";
-                                isValid = TryValidateEnumerable(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth);
+                                isValid = TryValidateEnumerable(propertyValue, recurse, errors, validatedObjects, validationResults, thePrefix, currentDepth);
                             }
                             else
                             {
-                                var thePrefix = $"{prefix}{property.Name}.";
-                                isValid = TryValidateImpl(propertyValue, recurse, errors, validatedObjects, thePrefix, currentDepth + 1);
+                                var thePrefix = $"{prefix}{property.Name}."; // <-- Note trailing '.' here
+                                isValid = TryValidateImpl(propertyValue, recurse, errors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
                             }
                         }
 
@@ -155,6 +158,7 @@ namespace System.ComponentModel.DataAnnotations
             bool recurse,
             IDictionary<string, string[]> errors,
             Dictionary<object, bool?> validatedObjects,
+            List<ValidationResult>? validationResults,
             string? prefix = null,
             int currentDepth = 0)
         {
@@ -169,7 +173,7 @@ namespace System.ComponentModel.DataAnnotations
 
                     var itemPrefix = $"{prefix}[{index}].";
 
-                    isValid = TryValidateImpl(item, recurse, errors, validatedObjects, prefix: itemPrefix, currentDepth + 1);
+                    isValid = TryValidateImpl(item, recurse, errors, validatedObjects, validationResults, prefix: itemPrefix, currentDepth + 1);
 
                     if (!isValid)
                     {
@@ -198,6 +202,7 @@ namespace System.ComponentModel.DataAnnotations
             }
 
             errors.Add($"{prefix}{propertyName}", errorsList);
+            validationResults.Clear();
         }
     }
 }

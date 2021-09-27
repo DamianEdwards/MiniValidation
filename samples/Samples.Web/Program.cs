@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using MiniValidation;
+using MiniValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
@@ -15,15 +17,17 @@ app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
 app.MapPost("/widgets", (Widget widget) =>
-    !MiniValidation.TryValidate(widget, out var errors)
-        ? Results.BadRequest(errors)
+    !MiniValidator.TryValidate(widget, out var errors)
+        ? Results.ValidationProblem(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 
 app.MapPost("/widgets-validated", (Validated<Widget> input) =>
 {
     var (widget, isValid, errors) = input;
-    return !isValid
-        ? Results.BadRequest(errors)
+    return !isValid || widget == null
+        ? input.DefaultBindingResultStatusCode.HasValue
+            ? Results.StatusCode(input.DefaultBindingResultStatusCode.Value)
+            : Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget);
 });
 

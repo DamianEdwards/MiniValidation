@@ -1,19 +1,10 @@
-﻿using System.Collections.Concurrent;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
-using MiniValidationLib.AspNetCore;
+﻿using System.Reflection;
+using Microsoft.AspNetCore.Http;
 
-namespace Microsoft.AspNetCore.Http;
+namespace MiniValidation.AspNetCore;
 
 /// <summary>
 /// Represents a validated object of the type specified by <typeparamref name="TValue"/> as a parameter to an ASP.NET Core route handler delegate.
-/// The object will be deserialized from the request body using the configured <see cref="JsonOptions"/> instance
-/// from the host's <see cref="IServiceProvider"/>. If the result of deserializing the request body to <typeparamref name="TValue"/>
-/// is <c>null</c>, the value of the parameter will also be <c>null</c>.
 /// </summary>
 /// <typeparam name="TValue">The type of the object being validated.</typeparam>
 public class Validated<TValue>
@@ -22,19 +13,35 @@ public class Validated<TValue>
     /// Initializes a new instance of the <see cref="Validated{TValue}"/> class.
     /// </summary>
     /// <param name="value">The object to validate.</param>
-    public Validated(TValue value)
+    /// <param name="initialErrors">Any initial object-level errors to populate the <see cref="Errors"/> collection with.</param>
+    public Validated(TValue? value, string[]? initialErrors)
     {
-        ArgumentNullException.ThrowIfNull(value, nameof(value));
-
+        var isValid = true;
         Value = value;
-        IsValid = MiniValidation.TryValidate(Value, out var errors);
-        Errors = errors;
+
+        if (Value != null)
+        {
+            isValid = MiniValidator.TryValidate(Value, out var errors);
+            Errors = errors;
+        }
+        else
+        {
+            Errors = new Dictionary<string, string[]>();
+        }
+
+        if (initialErrors != null)
+        {
+            isValid = false;
+            Errors.Add("", initialErrors);
+        }
+
+        IsValid = isValid;
     }
 
     /// <summary>
     /// The validated object.
     /// </summary>
-    public TValue Value { get; }
+    public TValue? Value { get; }
 
     /// <summary>
     /// Indicates whether the object is valid or not. <c>true</c> if the object is valid; <c>false</c> if it is not.
@@ -47,11 +54,17 @@ public class Validated<TValue>
     public IDictionary<string, string[]> Errors { get; }
 
     /// <summary>
+    /// Gets the response status code set by the default binding logic if there were any binding issues. This value will
+    /// be <c>null</c> if the default binding logic did not detect an issue.
+    /// </summary>
+    public int? DefaultBindingResultStatusCode { get; init; }
+
+    /// <summary>
     /// Deconstructs the <see cref="Value"/> and <see cref="IsValid"/> properties.
     /// </summary>
     /// <param name="value">The value of <see cref="Value"/>.</param>
     /// <param name="isValid">The value of <see cref="IsValid"/>.</param>
-    public void Deconstruct(out TValue value, out bool isValid)
+    public void Deconstruct(out TValue? value, out bool isValid)
     {
         value = Value;
         isValid = IsValid;
@@ -63,7 +76,7 @@ public class Validated<TValue>
     /// <param name="value">The value of <see cref="Value"/>.</param>
     /// <param name="isValid">The value of <see cref="IsValid"/>.</param>
     /// <param name="errors">The value of <see cref="Errors"/>.</param>
-    public void Deconstruct(out TValue value, out bool isValid, out IDictionary<string, string[]> errors)
+    public void Deconstruct(out TValue? value, out bool isValid, out IDictionary<string, string[]> errors)
     {
         value = Value;
         isValid = IsValid;
@@ -83,8 +96,15 @@ public class Validated<TValue>
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(parameter, nameof(parameter));
 
-        var value = await DefaultBinder<TValue>.GetValueAsync(context);
+        var (value, statusCode) = await DefaultBinder<TValue>.GetValueAsync(context);
 
-        return value == null ? null : new Validated<TValue>(value);
+        if (statusCode != StatusCodes.Status200OK)
+        {
+            // Binding issue, add an error
+            return new Validated<TValue>(default, new[] { $"An error occurred while processing the request." })
+                { DefaultBindingResultStatusCode = statusCode };
+        }
+
+        return value == null ? null : new Validated<TValue>(value, null);
     }
 }

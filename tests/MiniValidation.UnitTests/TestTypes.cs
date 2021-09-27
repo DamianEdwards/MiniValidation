@@ -1,4 +1,4 @@
-﻿namespace MiniValidationUnitTests;
+﻿namespace MiniValidation.UnitTests;
 
 class TestType
 {

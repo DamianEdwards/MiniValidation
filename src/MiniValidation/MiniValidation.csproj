@@ -5,7 +5,6 @@
     <TargetFrameworks>netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
     <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
     <LangVersion>9.0</LangVersion>
-    <RootNamespace>MiniValidationLib</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

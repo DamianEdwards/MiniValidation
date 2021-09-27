@@ -114,14 +114,17 @@ namespace MiniValidation.AspNetCore.Tests
             var httpContext = new Mock<HttpContext>();
             var features = new Mock<IFeatureCollection>();
             var httpRequest = new Mock<HttpRequest>();
+            var httpResponse = new Mock<HttpResponse>();
             var serviceProvider = new Mock<IServiceProvider>();
             var items = new Dictionary<object, object?>();
 
             httpRequest.SetupGet(x => x.Method).Returns("POST");
             httpRequest.SetupGet(x => x.HttpContext).Returns(httpContext.Object);
+            httpResponse.SetupProperty(x => x.StatusCode);
             httpContext.SetupGet(x => x.Items).Returns(items);
             httpContext.SetupGet(x => x.Features).Returns(features.Object);
             httpContext.SetupGet(x => x.Request).Returns(httpRequest.Object);
+            httpContext.SetupGet(x => x.Response).Returns(httpResponse.Object);
             httpContext.SetupGet(x => x.RequestAborted).Returns(CancellationToken.None);
             httpContext.SetupGet(x => x.RequestServices).Returns(serviceProvider.Object);
 

@@ -4,7 +4,6 @@
     <Description>ASP.NET Core extensions for MiniValidation.</Description>
     <TargetFramework>net6.0</TargetFramework>
     <PackageTags>ComponentModel DataAnnotations validation ASP.NET</PackageTags>
-    <RootNamespace>MiniValidationLib.AspNetCore</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 

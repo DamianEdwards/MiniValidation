@@ -1,10 +1,11 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using MiniValidation;
 
 var title = args.Length > 0 ? args[0] : "";
-var widget = new Widget { Name = title };
 
-if (!MiniValidation.TryValidate(widget, out var errors))
+var widget = new Widget { Name = title };
+if (!MiniValidator.TryValidate(widget, out var errors))
 {
     Console.WriteLine($"{nameof(Widget)} has errors!");
     foreach (var entry in errors)
