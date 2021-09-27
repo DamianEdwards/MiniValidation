@@ -21,11 +21,12 @@ If installing into an ASP.NET Core 6+ project, you can use the [MiniValidation.A
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
+using MiniValidation;
 
 var title = args.Length > 0 ? args[0] : "";
 var widget = new Widget { Name = title };
 
-if (!MiniValidation.TryValidate(widget, out var errors))
+if (!MiniValidator.TryValidate(widget, out var errors))
 {
     Console.WriteLine($"{nameof(Widget)} has errors!");
     foreach (var entry in errors)
@@ -71,6 +72,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
+using MiniValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
@@ -91,9 +93,9 @@ app.MapGet("/widgets", () =>
 app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
-// Example calling MiniValidation.TryValidate
+// Example calling MiniValidator.TryValidate
 app.MapPost("/widgets", (Widget widget) =>
-    !MiniValidation.TryValidate(widget, out var errors)
+    !MiniValidator.TryValidate(widget, out var errors)
         ? Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 
@@ -101,8 +103,10 @@ app.MapPost("/widgets", (Widget widget) =>
 app.MapPost("/widgets-validated", (Validated<Widget> input) =>
 {
     var (widget, isValid, errors) = input;
-    return !isValid
-        ? Results.BadRequest(errors)
+    return !isValid || widget == null
+        ? input.DefaultBindingResultStatusCode.HasValue
+            ? Results.StatusCode(input.DefaultBindingResultStatusCode.Value)
+            : Results.BadRequest(errors)
         : Results.Created($"/widgets/{widget.Name}", widget);
 });
 

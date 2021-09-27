@@ -21,8 +21,8 @@ namespace MiniValidation.AspNetCore.Tests
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
 
-            Assert.NotNull(result);
-            if (result == null) throw new InvalidOperationException("Result should not be null here.");
+            Assert.NotNull(result.Value);
+            if (result.Value == null) throw new InvalidOperationException("Result should not be null here.");
 
             Assert.True(result.IsValid);
         }
@@ -39,8 +39,8 @@ namespace MiniValidation.AspNetCore.Tests
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
 
-            Assert.NotNull(result);
-            if (result == null) throw new InvalidOperationException("Result should not be null here.");
+            Assert.NotNull(result.Value);
+            if (result.Value == null) throw new InvalidOperationException("Result should not be null here.");
 
             Assert.False(result.IsValid);
             Assert.Equal(expectedErrorCount, result.Errors.Count);
@@ -54,7 +54,7 @@ namespace MiniValidation.AspNetCore.Tests
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
 
-            Assert.Null(result);
+            Assert.Null(result.Value);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace MiniValidation.AspNetCore.Tests
 
             var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
 
-            Assert.Null(result);
+            Assert.Null(result.Value);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace MiniValidation.AspNetCore.Tests
 
             var result = await Validated<TestBindableType>.BindAsync(httpContext.Object, parameterInfo.Object);
 
-            Assert.NotNull(result);
+            Assert.NotNull(result.Value);
             Assert.True(httpContext.Object.Items[nameof(TestBindableType)] switch { true => true, _ => false });
         }
 

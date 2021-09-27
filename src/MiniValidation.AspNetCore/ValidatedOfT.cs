@@ -7,14 +7,15 @@ namespace MiniValidation.AspNetCore;
 /// Represents a validated object of the type specified by <typeparamref name="TValue"/> as a parameter to an ASP.NET Core route handler delegate.
 /// </summary>
 /// <typeparam name="TValue">The type of the object being validated.</typeparam>
-public class Validated<TValue>
+public struct Validated<TValue>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Validated{TValue}"/> class.
     /// </summary>
     /// <param name="value">The object to validate.</param>
     /// <param name="initialErrors">Any initial object-level errors to populate the <see cref="Errors"/> collection with.</param>
-    public Validated(TValue? value, string[]? initialErrors)
+    /// <param name="defaultBindingResultStatusCode">The <see cref="HttpResponse.StatusCode"/> set by the default binder, if any.</param>
+    public Validated(TValue? value, string[]? initialErrors = null, int? defaultBindingResultStatusCode = null)
     {
         var isValid = true;
         Value = value;
@@ -35,6 +36,7 @@ public class Validated<TValue>
             Errors.Add("", initialErrors);
         }
 
+        DefaultBindingResultStatusCode = defaultBindingResultStatusCode;
         IsValid = isValid;
     }
 
@@ -57,7 +59,7 @@ public class Validated<TValue>
     /// Gets the response status code set by the default binding logic if there were any binding issues. This value will
     /// be <c>null</c> if the default binding logic did not detect an issue.
     /// </summary>
-    public int? DefaultBindingResultStatusCode { get; init; }
+    public int? DefaultBindingResultStatusCode { get; }
 
     /// <summary>
     /// Deconstructs the <see cref="Value"/> and <see cref="IsValid"/> properties.
@@ -91,7 +93,7 @@ public class Validated<TValue>
     /// <param name="parameter">The route handler parameter being bound to.</param>
     /// <returns>An instance of <see cref="Validated{TValue}"/> if one is deserialized from the request, otherwise <c>null</c>.</returns>
     /// <exception cref="BadHttpRequestException">Thrown when the request Content-Type header is not a recognized JSON media type.</exception>
-    public static async ValueTask<Validated<TValue>?> BindAsync(HttpContext context, ParameterInfo parameter)
+    public static async ValueTask<Validated<TValue?>> BindAsync(HttpContext context, ParameterInfo parameter)
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(parameter, nameof(parameter));
@@ -101,10 +103,9 @@ public class Validated<TValue>
         if (statusCode != StatusCodes.Status200OK)
         {
             // Binding issue, add an error
-            return new Validated<TValue>(default, new[] { $"An error occurred while processing the request." })
-                { DefaultBindingResultStatusCode = statusCode };
+            return new Validated<TValue?>(default, new[] { $"An error occurred while processing the request." }, statusCode);
         }
 
-        return value == null ? null : new Validated<TValue>(value, null);
+        return new Validated<TValue?>(value, null, null);
     }
 }
