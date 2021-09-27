@@ -2,21 +2,10 @@
 
   <PropertyGroup>
     <Description>A minimalist validation library built atop the existing validation features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
-    <Authors>Damian Edwards</Authors>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
-    <VersionSuffix Condition="'$(BuildNumber)' != ''">pre.$(BuildNumber)</VersionSuffix>
     <TargetFrameworks>netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
-    <Copyright>Copyright © Damian Edwards</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/DamianEdwards/MiniValidation</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/DamianEdwards/MiniValidation</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <DebugType>embedded</DebugType>
     <LangVersion>9.0</LangVersion>
-    <Nullable>enable</Nullable>
+    <RootNamespace>MiniValidationLib</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
@@ -24,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>

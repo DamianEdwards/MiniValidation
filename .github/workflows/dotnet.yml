@@ -11,7 +11,7 @@ on:
     branches: [ main ]
 
 env:
-  DOTNET_SDK_VERSION: 6.0.100-rc.1.21430.44
+  DOTNET_SDK_VERSION: 6.0.100-rc.1.21463.6
 
 jobs:
   build:

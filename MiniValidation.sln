@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31613.370
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{751FE268-A797-46FE-AEE0-BD35D91BE850}"
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation", "src\MiniValidation\MiniValidation.csproj", "{60C03B53-10AC-4D37-BA95-7EEFE2FC61FC}"
 EndProject
@@ -21,12 +24,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{49CE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{68B9C62A-A89E-468C-9635-BD4FB3307F70}"
 	ProjectSection(SolutionItems) = preProject
+		.github\workflows\dotnet-ci.yml = .github\workflows\dotnet-ci.yml
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.AspNetCore", "src\MiniValidation.AspNetCore\MiniValidation.AspNetCore.csproj", "{7F14C946-632D-45E3-BFB6-80A5B51B4C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniValidation.AspNetCore.Tests", "tests\MiniValidation.AspNetCore.Tests\MiniValidation.AspNetCore.Tests.csproj", "{899DC54F-4A1A-4D98-B27C-C6C5E2EAEA2C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.AspNetCore.Tests", "tests\MiniValidation.AspNetCore.Tests\MiniValidation.AspNetCore.Tests.csproj", "{899DC54F-4A1A-4D98-B27C-C6C5E2EAEA2C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CDE0DB87-BF92-4F36-B305-B73CE116DD45}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		global.json = global.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

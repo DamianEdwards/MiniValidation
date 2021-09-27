@@ -1,7 +1,19 @@
 <Project>
 
   <PropertyGroup>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
+    <VersionSuffix Condition="'$(BuildNumber)' != ''">pre.$(BuildNumber)</VersionSuffix>
+    <Authors>Damian Edwards</Authors>
+    <Copyright>Copyright © Damian Edwards</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/DamianEdwards/MiniValidation</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DamianEdwards/MiniValidation</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IsPackable>true</IsPackable>
+    <DebugType>embedded</DebugType>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
 </Project>

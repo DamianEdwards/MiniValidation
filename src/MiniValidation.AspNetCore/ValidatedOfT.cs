@@ -1,9 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MiniValidationLib.AspNetCore;
 
 namespace Microsoft.AspNetCore.Http;
 
@@ -16,8 +18,6 @@ namespace Microsoft.AspNetCore.Http;
 /// <typeparam name="TValue">The type of the object being validated.</typeparam>
 public class Validated<TValue>
 {
-    private static readonly JsonSerializerOptions _defaultJsonSerializerOptions = new(JsonSerializerDefaults.Web);
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Validated{TValue}"/> class.
     /// </summary>
@@ -78,37 +78,12 @@ public class Validated<TValue>
     /// <param name="parameter">The route handler parameter being bound to.</param>
     /// <returns>An instance of <see cref="Validated{TValue}"/> if one is deserialized from the request, otherwise <c>null</c>.</returns>
     /// <exception cref="BadHttpRequestException">Thrown when the request Content-Type header is not a recognized JSON media type.</exception>
-#pragma warning disable IDE0060 // Remove unused parameter
     public static async ValueTask<Validated<TValue>?> BindAsync(HttpContext context, ParameterInfo parameter)
-#pragma warning restore IDE0060 // Remove unused parameter
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
         ArgumentNullException.ThrowIfNull(parameter, nameof(parameter));
 
-        TValue? value = default;
-
-        var feature = context.Features.Get<IHttpRequestBodyDetectionFeature>();
-        if (feature?.CanHaveBody == true)
-        {
-            if (!context.Request.HasJsonContentType())
-            {
-                throw new BadHttpRequestException(
-                    "Request Content-Type header was not a recognized JSON media type.",
-                    StatusCodes.Status415UnsupportedMediaType);
-            }
-
-            var jsonOptions = context.RequestServices.GetService<JsonOptions>();
-            var jsonSerializerOptions = jsonOptions?.SerializerOptions ?? _defaultJsonSerializerOptions;
-
-            try
-            {
-                value = (TValue?)await context.Request.ReadFromJsonAsync(typeof(TValue), jsonSerializerOptions, context.RequestAborted);
-            }
-            catch (JsonException ex)
-            {
-                throw new BadHttpRequestException(ex.Message, StatusCodes.Status400BadRequest, ex);
-            }
-        }
+        var value = await DefaultBinder<TValue>.GetValueAsync(context);
 
         return value == null ? null : new Validated<TValue>(value);
     }

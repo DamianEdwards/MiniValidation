@@ -70,6 +70,19 @@ namespace MiniValidation.AspNetCore.Tests
         }
 
         [Fact]
+        public async Task BindAsync_Uses_Binding_Logic_Of_Wrapped_Type()
+        {
+            var (httpContext, _, httpRequest, _) = CreateMockHttpContext("{}");
+            httpRequest.SetupGet(x => x.ContentType).Returns("application/json");
+            var parameterInfo = new Mock<ParameterInfo>();
+
+            var result = await Validated<TestBindableType>.BindAsync(httpContext.Object, parameterInfo.Object);
+
+            Assert.NotNull(result);
+            Assert.True(httpContext.Object.Items[nameof(TestBindableType)] switch { true => true, _ => false });
+        }
+
+        [Fact(Skip = "https://github.com/dotnet/aspnetcore/issues/36499")]
         public async Task BindAsync_Throws_BadRequestException_For_Non_Json_Request()
         {
             var (httpContext, _, httpRequest, _) = CreateMockHttpContext("some text");
@@ -82,7 +95,7 @@ namespace MiniValidation.AspNetCore.Tests
             });
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/aspnetcore/issues/36499")]
         public async Task BindAsync_Throws_BadRequestException_For_Empty_Json_Request()
         {
             var (httpContext, _, httpRequest, _) = CreateMockHttpContext("{}");
@@ -96,34 +109,17 @@ namespace MiniValidation.AspNetCore.Tests
             });
         }
 
-        [Fact]
-        public async Task BindAsync_Uses_JsonOptions_From_DI()
-        {
-            var (httpContext, features, httpRequest, serviceProvider) = CreateMockHttpContext("{\"name\":\"test\"}");
-            var jsonOptions = new JsonOptions();
-            var suffix = DateTime.UtcNow.Ticks.ToString();
-            jsonOptions.SerializerOptions.Converters.Add(new AppendToStringJsonConverter(suffix));
-            serviceProvider.Setup(x => x.GetService(typeof(JsonOptions))).Returns(jsonOptions);
-            var parameterInfo = new Mock<ParameterInfo>();
-
-            var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
-
-            Assert.NotNull(result);
-            if (result == null) throw new InvalidOperationException("Result should not be null here.");
-
-            Assert.True(result.IsValid);
-            Assert.Equal($"test{suffix}", result.Value.Name);
-        }
-
-        private (Mock<HttpContext>, Mock<IFeatureCollection>, Mock<HttpRequest>, Mock<IServiceProvider>) CreateMockHttpContext(string? requestBody = null)
+        private static (Mock<HttpContext>, Mock<IFeatureCollection>, Mock<HttpRequest>, Mock<IServiceProvider>) CreateMockHttpContext(string? requestBody = null)
         {
             var httpContext = new Mock<HttpContext>();
             var features = new Mock<IFeatureCollection>();
             var httpRequest = new Mock<HttpRequest>();
             var serviceProvider = new Mock<IServiceProvider>();
+            var items = new Dictionary<object, object?>();
 
             httpRequest.SetupGet(x => x.Method).Returns("POST");
             httpRequest.SetupGet(x => x.HttpContext).Returns(httpContext.Object);
+            httpContext.SetupGet(x => x.Items).Returns(items);
             httpContext.SetupGet(x => x.Features).Returns(features.Object);
             httpContext.SetupGet(x => x.Request).Returns(httpRequest.Object);
             httpContext.SetupGet(x => x.RequestAborted).Returns(CancellationToken.None);
@@ -147,6 +143,18 @@ namespace MiniValidation.AspNetCore.Tests
         {
             [Required]
             public string? Name {  get; set; }
+        }
+
+        private class TestBindableType
+        {
+            [Required]
+            public string? Name { get; set; }
+
+            public static async ValueTask<TestBindableType?> BindAsync(HttpContext context, ParameterInfo parameter)
+            {
+                context.Items[nameof(TestBindableType)] = true;
+                return await context.Request.ReadFromJsonAsync<TestBindableType>();
+            }
         }
 
         private class AppendToStringJsonConverter : JsonConverter<string>

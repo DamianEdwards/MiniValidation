@@ -2,20 +2,9 @@
 
   <PropertyGroup>
     <Description>ASP.NET Core extensions for MiniValidation.</Description>
-    <Authors>Damian Edwards</Authors>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
-    <VersionSuffix Condition="'$(BuildNumber)' != ''">pre.$(BuildNumber)</VersionSuffix>
     <TargetFramework>net6.0</TargetFramework>
-    <Copyright>Copyright © Damian Edwards</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/DamianEdwards/MiniValidation</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/DamianEdwards/MiniValidation</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
     <PackageTags>ComponentModel DataAnnotations validation ASP.NET</PackageTags>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <DebugType>embedded</DebugType>
-    <Nullable>enable</Nullable>
+    <RootNamespace>MiniValidationLib.AspNetCore</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
@@ -28,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   
 </Project>
