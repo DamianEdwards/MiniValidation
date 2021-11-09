@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace MiniValidation.AspNetCore.Tests
@@ -82,31 +83,33 @@ namespace MiniValidation.AspNetCore.Tests
             Assert.True(httpContext.Object.Items[nameof(TestBindableType)] switch { true => true, _ => false });
         }
 
-        [Fact(Skip = "https://github.com/dotnet/aspnetcore/issues/36499")]
-        public async Task BindAsync_Throws_BadRequestException_For_Non_Json_Request()
+        [Fact]
+        public async Task BindAsync_Returns_415_For_Non_Json_Request()
         {
-            var (httpContext, _, httpRequest, _) = CreateMockHttpContext("some text");
+            var (httpContext, _, httpRequest, services) = CreateMockHttpContext("some text");
             httpRequest.SetupGet(x => x.ContentType).Returns("text/plain");
+            services.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(ILoggerFactory)))).Returns(new LoggerFactory());
             var parameterInfo = new Mock<ParameterInfo>();
 
-            await Assert.ThrowsAsync<BadHttpRequestException>(async () =>
-            {
-                var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
-            });
+            var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
+
+            Assert.Equal(StatusCodes.Status415UnsupportedMediaType, result.DefaultBindingResultStatusCode);
+            Assert.Equal(1, result.Errors.Count);
         }
 
-        [Fact(Skip = "https://github.com/dotnet/aspnetcore/issues/36499")]
-        public async Task BindAsync_Throws_BadRequestException_For_Empty_Json_Request()
+        [Fact]
+        public async Task BindAsync_Returns_400_For_Empty_Json_Request()
         {
-            var (httpContext, _, httpRequest, _) = CreateMockHttpContext("{}");
+            var (httpContext, _, httpRequest, services) = CreateMockHttpContext("");
             httpRequest.SetupGet(x => x.Body).Returns(new MemoryStream());
+            services.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(ILoggerFactory)))).Returns(new LoggerFactory());
 
             var parameterInfo = new Mock<ParameterInfo>();
 
-            await Assert.ThrowsAsync<BadHttpRequestException>(async () =>
-            {
-                var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
-            });
+            var result = await Validated<TestType>.BindAsync(httpContext.Object, parameterInfo.Object);
+
+            Assert.Equal(StatusCodes.Status400BadRequest, result.DefaultBindingResultStatusCode);
+            Assert.Equal(1, result.Errors.Count);
         }
 
         private static (Mock<HttpContext>, Mock<IFeatureCollection>, Mock<HttpRequest>, Mock<IServiceProvider>) CreateMockHttpContext(string? requestBody = null)
