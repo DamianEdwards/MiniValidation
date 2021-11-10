@@ -30,7 +30,7 @@ jobs:
       run: dotnet restore
 
     - name: Set current date as env variable
-      run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
+      run: echo "NOW=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
     - name: Create build number
       run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
