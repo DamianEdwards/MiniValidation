@@ -108,16 +108,20 @@ namespace MiniValidation
 
             static string GetDisplayName(PropertyInfo property)
             {
+                string? displayName = null;
+
                 var displayAttribute = property.GetCustomAttribute<DisplayAttribute>();
                 if (displayAttribute?.ResourceType == null)
                 {
-                    return displayAttribute?.Name ?? property.Name;
+                    displayName = displayAttribute?.Name;
                 }
                 else
                 {
                     var resourceManager = new ResourceManager(displayAttribute.ResourceType);
-                    return resourceManager.GetString(displayAttribute.Name);
+                    displayName = resourceManager.GetString(displayAttribute.Name!) ?? displayAttribute.Name;
                 }
+
+                return displayName ?? property.Name;
             }
         }
 
