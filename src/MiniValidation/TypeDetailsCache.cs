@@ -66,7 +66,6 @@ namespace MiniValidation
                 // We'll remove them at the end if any other validatable properties are present.
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
-                    var displayName = property.GetCustomAttribute<DisplayAttribute>()?.Name ?? property.Name;
                     propertiesToValidate ??= new List<PropertyDetails>();
                     propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
                     hasPropertiesOfOwnType = true;
@@ -82,7 +81,6 @@ namespace MiniValidation
 
                 if (recurse || hasValidationOnProperty)
                 {
-                    var displayName = property.GetCustomAttribute<DisplayAttribute>()?.Name ?? property.Name;
                     propertiesToValidate ??= new List<PropertyDetails>();
                     propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
