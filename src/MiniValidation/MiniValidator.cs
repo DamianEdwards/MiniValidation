@@ -92,6 +92,7 @@ namespace MiniValidation
                 if (property.HasValidationAttributes)
                 {
                     validationContext.MemberName = property.Name;
+                    validationContext.DisplayName = property.DisplayName;
                     validationResults ??= new();
                     var propertyValue = property.GetValue(target);
                     var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
@@ -169,7 +170,10 @@ namespace MiniValidation
                 var index = 0;
                 foreach (var item in items)
                 {
-                    if (item is null) continue;
+                    if (item is null)
+                    {
+                        continue;
+                    }
 
                     var itemPrefix = $"{prefix}[{index}].";
 
