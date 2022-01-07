@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using System.Resources;
 
 namespace MiniValidation
 {
@@ -66,7 +67,7 @@ namespace MiniValidation
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new (property.Name, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
+                    propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
                 }
@@ -81,7 +82,7 @@ namespace MiniValidation
                 if (recurse || hasValidationOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
+                    propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
                 }
             }
@@ -89,7 +90,7 @@ namespace MiniValidation
             if (hasPropertiesOfOwnType && propertiesToValidate != null)
             {
                 // Remove properties of same type if there's nothing to validate on them
-                for (int i = propertiesToValidate.Count - 1; i >= 0; i--)
+                for (var i = propertiesToValidate.Count - 1; i >= 0; i--)
                 {
                     var property = propertiesToValidate[i];
                     var enumerableTypeHasProperties = property.EnumerableType != null
@@ -104,6 +105,24 @@ namespace MiniValidation
             }
 
             _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
+
+            static string GetDisplayName(PropertyInfo property)
+            {
+                string? displayName = null;
+
+                var displayAttribute = property.GetCustomAttribute<DisplayAttribute>();
+                if (displayAttribute?.ResourceType == null)
+                {
+                    displayName = displayAttribute?.Name;
+                }
+                else
+                {
+                    var resourceManager = new ResourceManager(displayAttribute.ResourceType);
+                    displayName = resourceManager.GetString(displayAttribute.Name!) ?? displayAttribute.Name;
+                }
+
+                return displayName ?? property.Name;
+            }
         }
 
         private static Type? GetEnumerableType(Type type)
@@ -113,7 +132,7 @@ namespace MiniValidation
                 return type.GetGenericArguments()[0];
             }
 
-            foreach (Type intType in type.GetInterfaces())
+            foreach (var intType in type.GetInterfaces())
             {
                 if (intType.IsGenericType
                     && intType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
@@ -126,7 +145,7 @@ namespace MiniValidation
         }
     }
 
-    internal record PropertyDetails(string Name, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
+    internal record PropertyDetails(string Name, string DisplayName, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
     {
         public object? GetValue(object target) => PropertyGetter(target);
         public bool IsEnumerable => EnumerableType != null;
