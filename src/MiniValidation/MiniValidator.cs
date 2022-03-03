@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Resources;
 using System.Runtime.CompilerServices;
 
 namespace MiniValidation
@@ -92,7 +93,7 @@ namespace MiniValidation
                 if (property.HasValidationAttributes)
                 {
                     validationContext.MemberName = property.Name;
-                    validationContext.DisplayName = property.DisplayName;
+                    validationContext.DisplayName = GetDisplayName(property);
                     validationResults ??= new();
                     var propertyValue = property.GetValue(target);
                     var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
@@ -152,6 +153,23 @@ namespace MiniValidation
             validatedObjects[target] = isValid;
 
             return isValid;
+
+            static string GetDisplayName(PropertyDetails property)
+            {
+                string? displayName = null;
+
+                if (property.DisplayAttribute?.ResourceType == null)
+                {
+                    displayName = property.DisplayAttribute?.Name;
+                }
+                else
+                {
+                    var resourceManager = new ResourceManager(property.DisplayAttribute.ResourceType);
+                    displayName = resourceManager.GetString(property.DisplayAttribute.Name!) ?? property.DisplayAttribute.Name;
+                }
+
+                return displayName ?? property.Name;
+            }
         }
 
         private static bool TryValidateEnumerable(
