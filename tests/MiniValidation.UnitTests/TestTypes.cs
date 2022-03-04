@@ -64,6 +64,11 @@ class TestSkippedChildType
 
 struct TestStruct
 {
+    public TestStruct()
+    {
+
+    }
+
     [Required]
     public string? RequiredName { get; set; } = "Default";
 
