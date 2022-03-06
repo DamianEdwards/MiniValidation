@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
-using System.Resources;
 
 namespace MiniValidation
 {
@@ -67,7 +66,7 @@ namespace MiniValidation
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
+                    propertiesToValidate.Add(new(property.Name, property.GetCustomAttribute<DisplayAttribute>(), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
                 }
@@ -82,7 +81,7 @@ namespace MiniValidation
                 if (recurse || hasValidationOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, GetDisplayName(property), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
+                    propertiesToValidate.Add(new(property.Name, property.GetCustomAttribute<DisplayAttribute>(), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
                 }
             }
@@ -105,24 +104,6 @@ namespace MiniValidation
             }
 
             _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
-
-            static string GetDisplayName(PropertyInfo property)
-            {
-                string? displayName = null;
-
-                var displayAttribute = property.GetCustomAttribute<DisplayAttribute>();
-                if (displayAttribute?.ResourceType == null)
-                {
-                    displayName = displayAttribute?.Name;
-                }
-                else
-                {
-                    var resourceManager = new ResourceManager(displayAttribute.ResourceType);
-                    displayName = resourceManager.GetString(displayAttribute.Name!) ?? displayAttribute.Name;
-                }
-
-                return displayName ?? property.Name;
-            }
         }
 
         private static Type? GetEnumerableType(Type type)
@@ -145,7 +126,7 @@ namespace MiniValidation
         }
     }
 
-    internal record PropertyDetails(string Name, string DisplayName, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
+    internal record PropertyDetails(string Name, DisplayAttribute? DisplayAttribute, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
     {
         public object? GetValue(object target) => PropertyGetter(target);
         public bool IsEnumerable => EnumerableType != null;
