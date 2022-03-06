@@ -134,6 +134,10 @@ public class TryValidate
         new object[] { true },
         new object[] { new DateTime(2021, 01, 01) },
         new object[] { new DateTimeOffset(2021, 01, 01, 0, 0, 0, TimeSpan.FromHours(1)) },
+#if NET6_0_OR_GREATER
+        new object[] { new DateOnly(2021, 01, 01) },
+        new object[] { new TimeOnly(0, 0) },
+#endif
         new object[] { StringComparison.OrdinalIgnoreCase },
         new object?[] { new int?(1) },
     };

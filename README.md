@@ -69,18 +69,10 @@ Widget 'MiniValidation' is valid!
 ### Web app (.NET 6)
 ```csharp
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
 using MiniValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
 
 app.MapGet("/", () => "Hello World");
 
@@ -93,22 +85,10 @@ app.MapGet("/widgets", () =>
 app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
-// Example calling MiniValidator.TryValidate
 app.MapPost("/widgets", (Widget widget) =>
     !MiniValidator.TryValidate(widget, out var errors)
-        ? Results.BadRequest(errors)
+        ? Results.ValidationProblem(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
-
-// Example using Validated<T> paramater binder
-app.MapPost("/widgets-validated", (Validated<Widget> input) =>
-{
-    var (widget, isValid, errors) = input;
-    return !isValid || widget == null
-        ? input.DefaultBindingResultStatusCode.HasValue
-            ? Results.StatusCode(input.DefaultBindingResultStatusCode.Value)
-            : Results.BadRequest(errors)
-        : Results.Created($"/widgets/{widget.Name}", widget);
-});
 
 app.Run();
 
