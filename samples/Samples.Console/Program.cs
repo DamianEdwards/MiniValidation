@@ -34,7 +34,7 @@ class Widget : IValidatableObject
     {
         if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
         {
-            yield return new("Cannot name a widget 'Widget'.");
+            yield return new("Cannot name a widget 'Widget'.", new [] { nameof(Name) });
         }
     }
 }

@@ -205,7 +205,7 @@ public class TryValidate
     }
 
     [Fact]
-    public void Invalid_When_ValidatableObject_Is_Invalid_And_Has_Invalid_Attributes()
+    public void ValidatableObject_Is_Not_Validated_When_Has_Invalid_Attributes()
     {
         var thingToValidate = new TestValidatableType
         {
@@ -216,8 +216,22 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(2, errors.Count);
+        Assert.Equal(1, errors.Count);
         Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
-        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.Skip(1).First());
+    }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_With_Class_Level_Only_Is_Invalid()
+    {
+        var thingToValidate = new TestClassLevelValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal("", errors.Keys.First());
     }
 }

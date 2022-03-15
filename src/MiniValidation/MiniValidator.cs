@@ -87,17 +87,20 @@ namespace MiniValidation
             var typeProperties = _typeDetailsCache.Get(targetType);
 
             var isValid = true;
-            var propertiesToRecurse = recurse ? new List<PropertyDetails>() : null;
+            var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
             ValidationContext propsValidationContext = new(target);
 
             foreach (var property in typeProperties)
             {
+                var propertyValue = property.GetValue(target);
+                var propertyType = propertyValue?.GetType();
+                var propertyTypeProperties = _typeDetailsCache.Get(propertyType);
+
                 if (property.HasValidationAttributes)
                 {
                     propsValidationContext.MemberName = property.Name;
                     propsValidationContext.DisplayName = GetDisplayName(property);
                     validationResults ??= new();
-                    var propertyValue = property.GetValue(target);
                     var propertyIsValid = Validator.TryValidateValue(propertyValue!, propsValidationContext, validationResults, property.ValidationAttributes);
                     if (!propertyIsValid)
                     {
@@ -105,18 +108,19 @@ namespace MiniValidation
                         isValid = false;
                     }
                 }
-                if (recurse && property.Recurse)
+                if (recurse && propertyValue is not null &&
+                        (property.Recurse || typeof(IValidatableObject).IsAssignableFrom(propertyType) || propertyTypeProperties.Any(p => p.Recurse)))
                 {
-                    propertiesToRecurse!.Add(property);
+                    propertiesToRecurse!.Add(property, propertyValue);
                 }
             }
 
-            if (typeof(IValidatableObject).IsAssignableFrom(targetType))
+            if (isValid && typeof(IValidatableObject).IsAssignableFrom(targetType))
             {
                 var validatable = (IValidatableObject)target;
                 ValidationContext validatableValidationContext = new(target);
                 var validatableResults = validatable.Validate(validatableValidationContext);
-                if (validatableResults is { })
+                if (validatableResults is not null)
                 {
                     ProcessValidationResults(validatableResults, workingErrors, prefix);
                     isValid = workingErrors.Count == 0;
@@ -137,20 +141,21 @@ namespace MiniValidation
                 {
                     foreach (var property in propertiesToRecurse)
                     {
-                        var propertyValue = property.GetValue(target);
+                        var propertyDetails = property.Key;
+                        var propertyValue = property.Value;
 
                         if (propertyValue != null)
                         {
                             RuntimeHelpers.EnsureSufficientExecutionStack();
 
-                            if (property.IsEnumerable)
+                            if (propertyDetails.IsEnumerable)
                             {
-                                var thePrefix = $"{prefix}{property.Name}";
+                                var thePrefix = $"{prefix}{propertyDetails.Name}";
                                 isValid = TryValidateEnumerable(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
                             }
                             else
                             {
-                                var thePrefix = $"{prefix}{property.Name}."; // <-- Note trailing '.' here
+                                var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
                                 isValid = TryValidateImpl(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
                             }
                         }
@@ -245,9 +250,22 @@ namespace MiniValidation
         {
             foreach (var result in validationResults)
             {
+                var hasMemberNames = false;
                 foreach (var memberName in result.MemberNames)
                 {
                     var key = $"{prefix}{memberName}";
+                    if (!errors.ContainsKey(key))
+                    {
+                        errors.Add(key, new());
+                    }
+                    errors[key].Add(result.ErrorMessage ?? "");
+                    hasMemberNames = true;
+                }
+
+                if (!hasMemberNames)
+                {
+                    // Class level error message
+                    var key = "";
                     if (!errors.ContainsKey(key))
                     {
                         errors.Add(key, new());

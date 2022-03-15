@@ -43,12 +43,20 @@ else
     Console.WriteLine($"{nameof(Widget)} '{widget}' is valid!");
 }
 
-class Widget
+class Widget : IValidatableObject
 {
     [Required, MinLength(3)]
     public string Name { get; set; }
 
     public override string ToString() => Name;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new("Cannot name a widget 'Widget'.", new [] { nameof(Name) });
+        }
+    }
 }
 ```
 ``` console
@@ -61,6 +69,11 @@ Name:
 Widget has errors!
   Name:
   - The field Name must be a string or array type with a minimum length of '3'.
+
+❯ widget.exe Widget
+Widget has errors!
+Name:
+  - Cannot name a widget 'Widget'.
 
 ❯ widget.exe MiniValidation
 Widget 'MiniValidation' is valid!
@@ -92,11 +105,19 @@ app.MapPost("/widgets", (Widget widget) =>
 
 app.Run();
 
-class Widget
+class Widget : IValidatableObject
 {
     [Required, MinLength(3)]
     public string? Name { get; set; }
 
     public override string? ToString() => Name;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new("Cannot name a widget 'Widget'.");
+        }
+    }
 }
 ```

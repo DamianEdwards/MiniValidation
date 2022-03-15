@@ -274,6 +274,36 @@ public class Recursion
     }
 
     [Fact]
+    public void Invalid_When_Derived_ValidatableObject_Child_Validate_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            Child = new TestValidatableChildType { TwentyOrMore = 19 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.Child)}.{nameof(TestValidatableType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_Derived_Polymorphic_Child_Validate_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            Child = new TestValidatableChildType { MinLengthFive = "123" }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.Child)}.{nameof(TestValidatableChildType.MinLengthFive)}", errors.Keys.First());
+    }
+
+    [Fact]
     public void Child_ValidatableObject_Is_Not_Validated_When_Parent_Is_Invalid()
     {
         var thingToValidate = new TestValidatableType { TenOrMore = 9 };
@@ -284,5 +314,50 @@ public class Recursion
         Assert.False(result);
         Assert.Equal(1, errors.Count);
         Assert.Equal($"{nameof(TestValidatableType.TenOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_Derived_ValidatableOnlyChild_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            ValidatableOnlyChild = new TestValidatableOnlyType { TwentyOrMore = 12 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.ValidatableOnlyChild)}.{nameof(TestValidatableOnlyType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_Polymorphic_ValidatableOnlyChild_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            PocoChild = new TestValidatableOnlyType { TwentyOrMore = 12 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestValidatableOnlyType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_Polymorphic_Child_With_Validation_Attributes_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            PocoChild = new TestChildType { MinLengthFive = "123" }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestChildType.MinLengthFive)}", errors.Keys.First());
     }
 }
