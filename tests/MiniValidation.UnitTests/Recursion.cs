@@ -257,4 +257,32 @@ public class Recursion
         Assert.True(result);
         Assert.Equal(0, errors.Count);
     }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Child_Validate_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            ValidatableChild = new TestValidatableChildType { TwentyOrMore = 12 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.ValidatableChild)}.{nameof(TestValidatableType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Child_ValidatableObject_Is_Not_Validated_When_Parent_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType { TenOrMore = 9 };
+        thingToValidate.ValidatableChild = new TestValidatableChildType { TwentyOrMore = 12 };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.TenOrMore)}", errors.Keys.First());
+    }
 }

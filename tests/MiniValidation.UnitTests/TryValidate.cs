@@ -173,4 +173,51 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(1, errors.Count);
     }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Validate_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Has_Invalid_Attributes()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TenOrMore = 9
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Is_Invalid_And_Has_Invalid_Attributes()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TenOrMore = 9,
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.Skip(1).First());
+    }
 }

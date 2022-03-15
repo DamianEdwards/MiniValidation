@@ -73,10 +73,11 @@ namespace MiniValidation
 
                 Visit(property.PropertyType, visited);
                 var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var properties) && properties.Length > 0;
+                var propertyTypeIsValidatbleObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType);
                 var enumerableTypeHasProperties = enumerableType != null
                     && _cache.TryGetValue(enumerableType, out var enumProperties)
                     && enumProperties.Length > 0;
-                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties) && !hasSkipRecursionOnProperty;
+                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties || propertyTypeIsValidatbleObject) && !hasSkipRecursionOnProperty;
 
                 if (recurse || hasValidationOnProperty)
                 {
