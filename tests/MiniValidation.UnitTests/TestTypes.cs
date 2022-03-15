@@ -9,12 +9,59 @@ class TestType
     public int TenOrMore { get; set; } = 10;
 
     [Required]
-    public TestChildType Child { get; set; } = new TestChildType();
+    public virtual TestChildType Child { get; set; } = new TestChildType();
+
+    public virtual TestValidatableChildType ValidatableChild { get; set; } = new TestValidatableChildType();
+
+    public virtual TestValidatableOnlyType ValidatableOnlyChild { get; set; } = new TestValidatableOnlyType();
+
+    public virtual object? PocoChild { get; set; } = default;
 
     [SkipRecursion]
     public TestChildType SkippedChild { get; set; } = new TestChildType();
 
     public IList<TestChildType> Children { get; } = new List<TestChildType>();
+}
+
+class TestValidatableType : TestType, IValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public override TestChildType Child { get; set; } = new TestChildTypeDerivative();
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (TwentyOrMore < 20)
+        {
+            yield return new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20.", new[] { nameof(TwentyOrMore) });
+        }
+    }
+}
+
+class TestValidatableOnlyType : IValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (TwentyOrMore < 20)
+        {
+            yield return new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20.", new[] { nameof(TwentyOrMore) });
+        }
+    }
+}
+
+class TestClassLevelValidatableOnlyType : IValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (TwentyOrMore < 20)
+        {
+            yield return new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20.");
+        }
+    }
 }
 
 class TestChildType
@@ -43,6 +90,19 @@ class TestChildType
             {
                 target.Child.RequiredCategory = null;
             }
+        }
+    }
+}
+
+class TestValidatableChildType : TestChildType, IValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (TwentyOrMore < 20)
+        {
+            yield return new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20.", new[] { nameof(TwentyOrMore) });
         }
     }
 }

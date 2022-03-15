@@ -173,4 +173,65 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(1, errors.Count);
     }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Validate_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_Has_Invalid_Attributes()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TenOrMore = 9
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public void ValidatableObject_Is_Not_Validated_When_Has_Invalid_Attributes()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            TenOrMore = 9,
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_ValidatableObject_With_Class_Level_Only_Is_Invalid()
+    {
+        var thingToValidate = new TestClassLevelValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal("", errors.Keys.First());
+    }
 }

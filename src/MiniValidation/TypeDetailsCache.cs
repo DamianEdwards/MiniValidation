@@ -12,8 +12,13 @@ namespace MiniValidation
         private static readonly PropertyDetails[] _emptyPropertyDetails = Array.Empty<PropertyDetails>();
         private readonly ConcurrentDictionary<Type, PropertyDetails[]> _cache = new();
 
-        public PropertyDetails[] Get(Type type)
+        public PropertyDetails[] Get(Type? type)
         {
+            if (type is null)
+            {
+                return _emptyPropertyDetails;
+            }
+
             if (!_cache.ContainsKey(type))
             {
                 Visit(type);
@@ -44,7 +49,7 @@ namespace MiniValidation
             var hasPropertiesOfOwnType = false;
             var hasValidatableProperties = false;
 
-            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy))
             {
                 if (property.GetIndexParameters().Length > 0)
                 {
@@ -73,10 +78,14 @@ namespace MiniValidation
 
                 Visit(property.PropertyType, visited);
                 var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var properties) && properties.Length > 0;
+                var propertyTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType);
+                var propertyTypeSupportsPolymorphism = !property.PropertyType.IsSealed;
                 var enumerableTypeHasProperties = enumerableType != null
                     && _cache.TryGetValue(enumerableType, out var enumProperties)
                     && enumProperties.Length > 0;
-                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties) && !hasSkipRecursionOnProperty;
+                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties || propertyTypeIsValidatableObject
+                    || propertyTypeSupportsPolymorphism)
+                    && !hasSkipRecursionOnProperty;
 
                 if (recurse || hasValidationOnProperty)
                 {

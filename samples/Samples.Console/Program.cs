@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using MiniValidation;
 
@@ -22,10 +23,18 @@ else
     Console.WriteLine($"{nameof(Widget)} '{widget}' is valid!");
 }
 
-class Widget
+class Widget : IValidatableObject
 {
     [Required, MinLength(3)]
     public string Name { get; set; }
 
     public override string ToString() => Name;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new("Cannot name a widget 'Widget'.", new [] { nameof(Name) });
+        }
+    }
 }
