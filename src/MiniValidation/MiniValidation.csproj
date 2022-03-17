@@ -4,6 +4,7 @@
     <Description>A minimalist validation library built atop the existing validation features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
     <TargetFrameworks>netstandard2.0;netcoreapp3.1;net6.0</TargetFrameworks>
     <PackageTags>ComponentModel DataAnnotations validation</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
@@ -12,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 
