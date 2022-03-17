@@ -10,9 +10,9 @@ Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ```
 
 ### ASP.NET Core 6+ Projects
-If installing into an ASP.NET Core 6+ project, you can use the [MiniValidation.AspNetCore]((https://www.nuget.org/packages/MiniValidation.AspNetCore)) package instead, which adds extensions specific to ASP.NET Core:
+If installing into an ASP.NET Core 6+ project, consider using the [MinimalApis.Extensions]((https://www.nuget.org/packages/MinimalApis.Extensions)) package instead, which adds extensions specific to ASP.NET Core:
 ``` console
-❯ dotnet add package MiniValidation.AspNetCore --prerelease
+❯ dotnet add package MinimalApis.Extensions --prerelease
 ```
 
 ## Example usage
