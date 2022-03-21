@@ -4,6 +4,8 @@ A minimalistic validation library built atop the existing features in .NET's `Sy
 Supports .NET Standard 2.0 compliant runtimes.
 
 ## Installation
+[![Nuget](https://img.shields.io/nuget/v/MiniValidation)](https://www.nuget.org/packages/MiniValidation/)
+
 Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ``` console
 ❯ dotnet add package MiniValidation --prerelease
