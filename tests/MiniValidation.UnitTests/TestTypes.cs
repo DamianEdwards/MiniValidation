@@ -17,7 +17,7 @@ class TestType
 
     public virtual object? PocoChild { get; set; } = default;
 
-    public IAnInterface InterfaceProperty { get; set; } = default;
+    public IAnInterface? InterfaceProperty { get; set; }
 
     [SkipRecursion]
     public TestChildType SkippedChild { get; set; } = new TestChildType();
