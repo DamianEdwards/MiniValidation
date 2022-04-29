@@ -8,7 +8,6 @@ on:
     - '**/*.gitignore'
     - '**/*.gitattributes'
   workflow_dispatch:
-    branches: [ main ]
 
 env:
   DOTNET_SDK_SIX_VERSION: 6.0.x
