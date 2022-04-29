@@ -117,15 +117,14 @@ namespace MiniValidation
 
         private static Type? GetEnumerableType(Type type)
         {
-            if (type.IsInterface && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (type.IsInterface && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return type.GetGenericArguments()[0];
             }
 
             foreach (var intType in type.GetInterfaces())
             {
-                if (intType.IsGenericType
-                    && intType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                if (intType.IsGenericType && intType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 {
                     return intType.GetGenericArguments()[0];
                 }

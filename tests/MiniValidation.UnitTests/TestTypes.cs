@@ -17,6 +17,8 @@ class TestType
 
     public virtual object? PocoChild { get; set; } = default;
 
+    public IAnInterface? InterfaceProperty { get; set; }
+
     [SkipRecursion]
     public TestChildType SkippedChild { get; set; } = new TestChildType();
 
@@ -135,3 +137,5 @@ struct TestStruct
     [Range(10, 100)]
     public int TenOrMore { get; set; } = 10;
 }
+
+interface IAnInterface { }
