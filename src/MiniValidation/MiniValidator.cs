@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Resources;
@@ -15,12 +16,35 @@ namespace MiniValidation
     public static class MiniValidator
     {
         private static readonly TypeDetailsCache _typeDetailsCache = new();
+        private static readonly IDictionary<string, string[]> _emptyErrors = new ReadOnlyDictionary<string, string[]>(new Dictionary<string, string[]>());
 
         /// <summary>
         /// Gets or sets the maximum depth allowed when validating an object with recursion enabled.
         /// Defaults to 32.
         /// </summary>
         public static int MaxDepth { get; set; } = 32;
+
+        /// <summary>
+        /// Determines if the specified <see cref="Type"/> has anything to validate.
+        /// </summary>
+        /// <remarks>
+        /// Objects of types with nothing to validate will always return <c>true</c> when passed to <see cref="TryValidate(object, out IDictionary{string, string[]})"/>.
+        /// </remarks>
+        /// <param name="targetType">The <see cref="Type"/>.</param>
+        /// <param name="recurse"><c>true</c> to recursively check descendant types; if <c>false</c> only simple values directly on the target type are checked.</param>
+        /// <returns><c>true</c> if the <see cref="Type"/> has anything to validate, <c>false</c> if not.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool RequiresValidation(Type targetType, bool recurse = true)
+        {
+            if (targetType == null)
+            {
+                throw new ArgumentNullException(nameof(targetType));
+            }
+
+            return typeof(IValidatableObject).IsAssignableFrom(targetType)
+                || (recurse && typeof(IEnumerable).IsAssignableFrom(targetType))
+                || _typeDetailsCache.Get(targetType).Any(p => p.HasValidationAttributes || recurse);
+        }
 
         /// <summary>
         /// Determines whether the specific object is valid. This method recursively validates descendant objects.
@@ -51,6 +75,14 @@ namespace MiniValidation
             if (target == null)
             {
                 throw new ArgumentNullException(nameof(target));
+            }
+
+            if (!RequiresValidation(target.GetType(), recurse))
+            {
+                errors = _emptyErrors;
+
+                // Return true for types with nothing to validate
+                return true;
             }
 
             var validatedObjects = new Dictionary<object, bool?>();
