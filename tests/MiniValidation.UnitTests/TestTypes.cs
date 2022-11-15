@@ -5,6 +5,9 @@ class TestType
     [Required]
     public string? RequiredName { get; set; } = "Default";
 
+    [Required, Display(Name = "Required name")]
+    public string? RequiredNameWithDisplay { get; set; } = "Default";
+
     [Range(10, 100)]
     public int TenOrMore { get; set; } = 10;
 

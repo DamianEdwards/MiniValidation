@@ -113,6 +113,21 @@ public class TryValidate
     }
 
     [Fact]
+    public void Validator_DisplayAttribute_Name_Used_In_Error_Message()
+    {
+        var thingToValidate = new TestType { RequiredNameWithDisplay = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Collection(errors,
+            entry => Assert.Collection(entry.Value,
+                error => Assert.Contains("Required name", error)
+            )
+        );
+    }
+
+    [Fact]
     public void List_Invalid_When_Entry_Invalid()
     {
         var collectionToValidate = new List<TestType> { new TestType { RequiredName = null } };

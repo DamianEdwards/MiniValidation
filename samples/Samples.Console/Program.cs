@@ -31,7 +31,7 @@ foreach (var widget in widgets)
 
 class Widget
 {
-    [Required, MinLength(3)]
+    [Required, MinLength(3), Display(Name = "Widget name")]
     public string Name { get; set; }
 
     public override string ToString() => Name;
