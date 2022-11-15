@@ -20,15 +20,23 @@ app.MapPost("/widgets", (Widget widget) =>
         ? Results.ValidationProblem(errors)
         : Results.Created($"/widgets/{widget.Name}", widget));
 
+app.MapPost("/widgets/custom-validation", (WidgetWithCustomValidation widget) =>
+    !MiniValidator.TryValidate(widget, out var errors)
+        ? Results.ValidationProblem(errors)
+        : Results.Created($"/widgets/{widget.Name}", widget));
+
 app.Run();
 
-class Widget : IValidatableObject
+class Widget
 {
     [Required, MinLength(3)]
     public string? Name { get; set; }
 
     public override string? ToString() => Name;
+}
 
+class WidgetWithCustomValidation : Widget, IValidatableObject
+{
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
