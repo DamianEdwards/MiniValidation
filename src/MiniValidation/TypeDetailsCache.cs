@@ -58,6 +58,7 @@ namespace MiniValidation
                 }
 
                 var validationAttributes = property.GetCustomAttributes().OfType<ValidationAttribute>();
+                // TODO: Handle records with primary constructors
                 var hasValidationOnProperty = validationAttributes.Any();
                 var hasSkipRecursionOnProperty = property.GetCustomAttributes().OfType<SkipRecursionAttribute>().Any();
                 var enumerableType = GetEnumerableType(property.PropertyType);

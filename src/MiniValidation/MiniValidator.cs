@@ -229,7 +229,7 @@ public static class MiniValidator
 
                 var itemPrefix = $"{prefix}[{index}].";
 
-                isValid = TryValidateImpl(item, recurse, workingErrors, validatedObjects, validationResults, prefix: itemPrefix, currentDepth + 1);
+                isValid = TryValidateImpl(item, recurse, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
 
                 if (!isValid)
                 {

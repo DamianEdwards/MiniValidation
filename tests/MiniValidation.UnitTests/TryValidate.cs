@@ -68,6 +68,30 @@ public class TryValidate
         Assert.Equal(0, errors.Count);
     }
 
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void NonRequiredValidator_Valid_When_Valid_On_Record()
+    {
+        var thingToValidate = new TestRecordType(TenOrMore: 11);
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void NonRequiredValidator_Invalid_When_Invalid_On_Record()
+    {
+        var thingToValidate = new TestRecordType(TenOrMore: 9);
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+#endif
+
     [Fact]
     public void MultipleValidators_Valid_When_All_Valid()
     {
