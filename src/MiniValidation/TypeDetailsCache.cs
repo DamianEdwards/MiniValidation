@@ -140,7 +140,7 @@ namespace MiniValidation
             {
                 foreach (var parameter in ctorParams)
                 {
-                    if (parameter.Name.Equals(property.Name, StringComparison.Ordinal))
+                    if (string.Equals(parameter.Name, property.Name, StringComparison.Ordinal))
                     {
                         // Matching parameter found
                         paramAttributes = parameter.GetCustomAttributes();
