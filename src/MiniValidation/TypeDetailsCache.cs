@@ -46,6 +46,18 @@ namespace MiniValidation
                 return;
             }
 
+            // Find a constructor that matches the Deconstruct method (this will be the primary constuctor for record types)
+            ParameterInfo[]? primaryCtorParams = null;
+            if (type.GetMethod("Deconstruct") is { } deconstruct)
+            {
+                // Parameters to Deconstruct are 'byref' so need to call GetElementType() to get underlying type
+                var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType()).ToArray();
+                if (type.GetConstructor(deconstructParams) is { } ctor)
+                {
+                    primaryCtorParams = ctor.GetParameters();
+                }
+            }
+
             List<PropertyDetails>? propertiesToValidate = null;
             var hasPropertiesOfOwnType = false;
             var hasValidatableProperties = false;
@@ -58,7 +70,7 @@ namespace MiniValidation
                     continue;
                 }
 
-                var (validationAttributes, displayAttribute, skipRecursionAttribute) = GetPropertyAttributes(property);
+                var (validationAttributes, displayAttribute, skipRecursionAttribute) = GetPropertyAttributes(primaryCtorParams, property);
                 validationAttributes ??= Array.Empty<ValidationAttribute>();
                 var hasValidationOnProperty = validationAttributes.Length > 0;
                 var hasSkipRecursionOnProperty = skipRecursionAttribute is not null;
@@ -117,28 +129,22 @@ namespace MiniValidation
             _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
         }
 
-        private (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(PropertyInfo property)
+        private (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(ParameterInfo[]? primaryCtorParameters, PropertyInfo property)
         {
             List<ValidationAttribute>? validationAttributes = null;
             DisplayAttribute? displayAttribute = null;
             SkipRecursionAttribute? skipRecursionAttribute = null;
 
-            // Find a constructor that matches the Deconstruct method (this will be the primary constuctor for record types)
             IEnumerable<Attribute>? paramAttributes = null;
-            if (property.DeclaringType.GetMethod("Deconstruct") is { } deconstruct)
+            if (primaryCtorParameters is { } ctorParams)
             {
-                // Parameters to Deconstruct are 'byref' so need to call GetElementType() to get underlying type
-                var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType()).ToArray();
-                if (property.DeclaringType.GetConstructor(deconstructParams) is { } primaryCtor)
+                foreach (var parameter in ctorParams)
                 {
-                    foreach (var parameter in primaryCtor.GetParameters())
+                    if (parameter.Name.Equals(property.Name, StringComparison.Ordinal))
                     {
-                        if (parameter.Name.Equals(property.Name, StringComparison.Ordinal))
-                        {
-                            // Matching parameter found
-                            paramAttributes = parameter.GetCustomAttributes();
-                            break;
-                        }
+                        // Matching parameter found
+                        paramAttributes = parameter.GetCustomAttributes();
+                        break;
                     }
                 }
             }
