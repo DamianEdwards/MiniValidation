@@ -4,20 +4,19 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace MiniValidation
 {
     internal class TypeDetailsCache
     {
         private static readonly PropertyDetails[] _emptyPropertyDetails = Array.Empty<PropertyDetails>();
-        private readonly ConcurrentDictionary<Type, PropertyDetails[]> _cache = new();
+        private readonly ConcurrentDictionary<Type, (PropertyDetails[] Properties, bool RequiresAsync)> _cache = new();
 
-        public PropertyDetails[] Get(Type? type)
+        public (PropertyDetails[] Properties, bool RequiresAsync) Get(Type? type)
         {
             if (type is null)
             {
-                return _emptyPropertyDetails;
+                return (_emptyPropertyDetails, false);
             }
 
             if (!_cache.ContainsKey(type))
@@ -31,10 +30,11 @@ namespace MiniValidation
         private void Visit(Type type)
         {
             var visited = new HashSet<Type>();
-            Visit(type, visited);
+            bool requiresAsync = false;
+            Visit(type, visited, ref requiresAsync);
         }
 
-        private void Visit(Type type, HashSet<Type> visited)
+        private void Visit(Type type, HashSet<Type> visited, ref bool requiresAsync)
         {
             if (_cache.ContainsKey(type))
             {
@@ -46,12 +46,17 @@ namespace MiniValidation
                 return;
             }
 
+            if (typeof(IAsyncValidatableObject).IsAssignableFrom(type))
+            {
+                requiresAsync = true;
+            }
+
             // Find a constructor that matches the Deconstruct method (this will be the primary constuctor for record types)
             ParameterInfo[]? primaryCtorParams = null;
             if (type.GetMethod("Deconstruct") is { } deconstruct)
             {
                 // Parameters to Deconstruct are 'byref' so need to call GetElementType() to get underlying type
-                var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType()).ToArray();
+                var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType() ?? p.ParameterType).ToArray();
                 if (type.GetConstructor(deconstructParams) is { } ctor)
                 {
                     primaryCtorParams = ctor.GetParameters();
@@ -77,7 +82,7 @@ namespace MiniValidation
                 var enumerableType = GetEnumerableType(property.PropertyType);
                 if (enumerableType != null)
                 {
-                    Visit(enumerableType, visited);
+                    Visit(enumerableType, visited, ref requiresAsync);
                 }
 
                 // Defer fully checking properties that are of the same type we're currently building the cache for.
@@ -90,14 +95,16 @@ namespace MiniValidation
                     continue;
                 }
 
-                Visit(property.PropertyType, visited);
-                var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var properties) && properties.Length > 0;
-                var propertyTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType);
+                Visit(property.PropertyType, visited, ref requiresAsync);
+                var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var typeCache) && typeCache.Properties.Length > 0;
+                var propertyTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType)
+                                                      || typeof(IAsyncValidatableObject).IsAssignableFrom(property.PropertyType);
                 var propertyTypeSupportsPolymorphism = !property.PropertyType.IsSealed;
                 var enumerableTypeHasProperties = enumerableType != null
                     && _cache.TryGetValue(enumerableType, out var enumProperties)
-                    && enumProperties.Length > 0;
-                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties || propertyTypeIsValidatableObject
+                    && enumProperties.Item1.Length > 0;
+                var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties
+                    || propertyTypeIsValidatableObject
                     || propertyTypeSupportsPolymorphism)
                     && !hasSkipRecursionOnProperty;
 
@@ -116,8 +123,8 @@ namespace MiniValidation
                 {
                     var property = propertiesToValidate[i];
                     var enumerableTypeHasProperties = property.EnumerableType != null
-                        && _cache.TryGetValue(property.EnumerableType, out var enumProperties)
-                        && enumProperties.Length > 0;
+                        && _cache.TryGetValue(property.EnumerableType, out var typeCache)
+                        && typeCache.Properties.Length > 0;
                     var keepProperty = property.Type != type || (hasValidatableProperties || enumerableTypeHasProperties);
                     if (!keepProperty)
                     {
@@ -126,7 +133,7 @@ namespace MiniValidation
                 }
             }
 
-            _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
+            _cache[type] = (propertiesToValidate?.ToArray() ?? _emptyPropertyDetails, requiresAsync);
         }
 
         private (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(ParameterInfo[]? primaryCtorParameters, PropertyInfo property)

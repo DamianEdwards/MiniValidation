@@ -69,6 +69,26 @@ class TestClassLevelValidatableOnlyType : IValidatableObject
     }
 }
 
+class TestClassLevelAsyncValidatableOnlyType : IAsyncValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public async Task<IEnumerable<ValidationResult>> ValidateAsync(ValidationContext validationContext)
+    {
+        await Task.Yield();
+
+        List<ValidationResult>? errors = null;
+
+        if (TwentyOrMore < 20)
+        {
+            errors ??= new List<ValidationResult>();
+            errors.Add(new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20."));
+        }
+
+        return errors ?? Enumerable.Empty<ValidationResult>();
+    }
+}
+
 class TestChildType
 {
     [Required]

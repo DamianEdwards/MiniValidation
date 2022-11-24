@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace MiniValidation.UnitTests;
 
 public class TryValidate
@@ -287,6 +289,21 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal("", errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task Invalid_When_AsyncValidatableObject_With_Class_Level_Only_Is_Invalid()
+    {
+        var thingToValidate = new TestClassLevelAsyncValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, true);
+
+        Assert.False(isValid);
         Assert.Equal(1, errors.Count);
         Assert.Equal("", errors.Keys.First());
     }
