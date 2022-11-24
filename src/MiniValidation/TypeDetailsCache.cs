@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace MiniValidation
 {
@@ -57,10 +58,10 @@ namespace MiniValidation
                     continue;
                 }
 
-                var validationAttributes = property.GetCustomAttributes().OfType<ValidationAttribute>();
-                // TODO: Handle records with primary constructors
-                var hasValidationOnProperty = validationAttributes.Any();
-                var hasSkipRecursionOnProperty = property.GetCustomAttributes().OfType<SkipRecursionAttribute>().Any();
+                var (validationAttributes, displayAttribute, skipRecursionAttribute) = GetPropertyAttributes(property);
+                validationAttributes ??= Array.Empty<ValidationAttribute>();
+                var hasValidationOnProperty = validationAttributes.Length > 0;
+                var hasSkipRecursionOnProperty = skipRecursionAttribute is not null;
                 var enumerableType = GetEnumerableType(property.PropertyType);
                 if (enumerableType != null)
                 {
@@ -72,7 +73,7 @@ namespace MiniValidation
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, property.GetCustomAttribute<DisplayAttribute>(), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
+                    propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
                 }
@@ -114,6 +115,57 @@ namespace MiniValidation
             }
 
             _cache[type] = propertiesToValidate?.ToArray() ?? _emptyPropertyDetails;
+        }
+
+        private (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(PropertyInfo property)
+        {
+            List<ValidationAttribute>? validationAttributes = null;
+            DisplayAttribute? displayAttribute = null;
+            SkipRecursionAttribute? skipRecursionAttribute = null;
+
+            // Find a constructor that matches the Deconstruct method (this will be the primary constuctor)
+            IEnumerable<Attribute>? paramAttributes = null;
+            if (property.DeclaringType.GetMethod("Deconstruct") is { } deconstruct)
+            {
+                // Parameters to Deconstruct are 'byref' so need to call GetElementType() to get underlying type
+                var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType()).ToArray();
+                if (property.DeclaringType.GetConstructor(deconstructParams) is { } primaryCtor)
+                {
+                    foreach (var parameter in primaryCtor.GetParameters())
+                    {
+                        if (parameter.Name.Equals(property.Name, StringComparison.Ordinal))
+                        {
+                            // Matching parameter found
+                            paramAttributes = parameter.GetCustomAttributes();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            var propertyAttributes = property.GetCustomAttributes();
+            var customAttributes = paramAttributes is not null
+                ? paramAttributes.Concat(propertyAttributes)
+                : propertyAttributes;
+
+            foreach (var attr in customAttributes)
+            {
+                if (attr is ValidationAttribute validationAttr)
+                {
+                    validationAttributes ??= new();
+                    validationAttributes.Add(validationAttr);
+                }
+                else if (attr is DisplayAttribute displayAttr)
+                {
+                    displayAttribute = displayAttr;
+                }
+                else if (attr is SkipRecursionAttribute skipRecursionAttr)
+                {
+                    skipRecursionAttribute = skipRecursionAttr;
+                }
+            }
+
+            return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
         }
 
         private static Type? GetEnumerableType(Type type)
