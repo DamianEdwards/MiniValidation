@@ -144,5 +144,5 @@ struct TestStruct
 interface IAnInterface { }
 
 #if NET6_0_OR_GREATER
-record TestRecordType([Required] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10);
+record TestRecordType([Required, Display(Name = "Required name")] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10);
 #endif

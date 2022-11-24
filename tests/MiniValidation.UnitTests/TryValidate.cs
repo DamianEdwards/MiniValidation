@@ -151,6 +151,23 @@ public class TryValidate
         );
     }
 
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void Validator_DisplayAttribute_Name_Used_In_Error_Message_For_Record()
+    {
+        var thingToValidate = new TestRecordType("");
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Collection(errors,
+            entry => Assert.Collection(entry.Value,
+                error => Assert.Contains("Required name", error)
+            )
+        );
+    }
+#endif
+
     [Fact]
     public void List_Invalid_When_Entry_Invalid()
     {

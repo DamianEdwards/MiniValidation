@@ -85,7 +85,7 @@ namespace MiniValidation
                 if (type == property.PropertyType && !hasSkipRecursionOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), true, enumerableType));
+                    propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes, true, enumerableType));
                     hasPropertiesOfOwnType = true;
                     continue;
                 }
@@ -104,7 +104,7 @@ namespace MiniValidation
                 if (recurse || hasValidationOnProperty)
                 {
                     propertiesToValidate ??= new List<PropertyDetails>();
-                    propertiesToValidate.Add(new(property.Name, property.GetCustomAttribute<DisplayAttribute>(), property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes.ToArray(), recurse, enumerableTypeHasProperties ? enumerableType : null));
+                    propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes, recurse, enumerableTypeHasProperties ? enumerableType : null));
                     hasValidatableProperties = true;
                 }
             }
@@ -140,7 +140,8 @@ namespace MiniValidation
             {
                 foreach (var parameter in ctorParams)
                 {
-                    if (string.Equals(parameter.Name, property.Name, StringComparison.Ordinal))
+                    if (string.Equals(parameter.Name, property.Name, StringComparison.Ordinal)
+                        && parameter.ParameterType == property.PropertyType)
                     {
                         // Matching parameter found
                         paramAttributes = parameter.GetCustomAttributes();
