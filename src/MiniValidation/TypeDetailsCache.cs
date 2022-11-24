@@ -123,7 +123,7 @@ namespace MiniValidation
             DisplayAttribute? displayAttribute = null;
             SkipRecursionAttribute? skipRecursionAttribute = null;
 
-            // Find a constructor that matches the Deconstruct method (this will be the primary constuctor)
+            // Find a constructor that matches the Deconstruct method (this will be the primary constuctor for record types)
             IEnumerable<Attribute>? paramAttributes = null;
             if (property.DeclaringType.GetMethod("Deconstruct") is { } deconstruct)
             {
