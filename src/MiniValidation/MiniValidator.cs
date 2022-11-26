@@ -109,7 +109,7 @@ public static class MiniValidator
             return true;
         }
 
-        if (_typeDetailsCache.Get(target.GetType()).RequiresAsync)
+        if (_typeDetailsCache.Get(target.GetType()).RequiresAsync && !allowAsync)
         {
             throw new ArgumentException($"The target type {target.GetType().Name} requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.", nameof(target));
         }
