@@ -367,4 +367,33 @@ public class Recursion
         Assert.Equal(1, errors.Count);
         Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestChildType.MinLengthFive)}", errors.Keys.First());
     }
+
+    [Fact]
+    public void Throws_InvalidOperationException_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            PocoChild = new TestAsyncValidatableChildType { TwentyOrMore = 12 }
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+        });
+    }
+
+    [Fact]
+    public void Invalid_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Allowing_SyncOverAsync()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            PocoChild = new TestAsyncValidatableChildType { TwentyOrMore = 12 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: true, allowAsync: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestValidatableOnlyType.TwentyOrMore)}", errors.Keys.First());
+    }
 }

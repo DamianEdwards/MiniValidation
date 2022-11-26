@@ -132,6 +132,25 @@ class TestValidatableChildType : TestChildType, IValidatableObject
     }
 }
 
+class TestAsyncValidatableChildType : TestChildType, IAsyncValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public async Task<IEnumerable<ValidationResult>> ValidateAsync(ValidationContext validationContext)
+    {
+        await Task.Yield();
+
+        List<ValidationResult>? result = null;
+        if (TwentyOrMore < 20)
+        {
+            result ??= new();
+            result.Add(new ($"The field {validationContext.DisplayName} must have a value greater than 20.", new[] { nameof(TwentyOrMore) }));
+        }
+
+        return result ?? Enumerable.Empty<ValidationResult>();
+    }
+}
+
 class TestChildTypeDerivative : TestChildType
 {
     public override string? RequiredCategory { get; set; } = "Derived Default";

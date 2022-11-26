@@ -21,7 +21,7 @@ public class Benchmarks
         foreach (var type in types)
         {
             var target = Activator.CreateInstance(type);
-            MiniValidator.TryValidate(target, recurse: true, out var _);
+            MiniValidator.TryValidate(target, recurse: true, allowAsync: false, out var _);
         }
     }
 
@@ -37,7 +37,7 @@ public class Benchmarks
     public (bool, IDictionary<string, string[]>) SinglePropertyToValidate_NoRecursion_Valid()
     {
         var target = new BenchmarkTypes.Todo { Title = "This is the title" };
-        var isValid = MiniValidator.TryValidate(target, false, out var errors);
+        var isValid = MiniValidator.TryValidate(target, recurse: false, allowAsync: false, out var errors);
         return (isValid, errors);
     }
 
@@ -45,7 +45,7 @@ public class Benchmarks
     public (bool, IDictionary<string, string[]>) SinglePropertyToValidate_NoRecursion_Invalid()
     {
         var target = new BenchmarkTypes.Todo { Title = "" };
-        var isValid = MiniValidator.TryValidate(target, false, out var errors);
+        var isValid = MiniValidator.TryValidate(target, recurse: false, allowAsync: false, out var errors);
         return (isValid, errors);
     }
 

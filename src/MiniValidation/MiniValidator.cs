@@ -61,19 +61,40 @@ public static class MiniValidator
             throw new ArgumentNullException(nameof(target));
         }
 
-        return TryValidate(target, recurse: true, out errors);
+        return TryValidate(target, recurse: true, allowAsync: false, out errors);
     }
 
     /// <summary>
     /// Determines whether the specific object is valid.
     /// </summary>
+    /// <typeparam name="TTarget">The type of the target of validation.</typeparam>
     /// <param name="target">The object to validate.</param>
     /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
     /// <param name="errors">A dictionary that contains details of each failed validation.</param>
     /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
-    /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation.</exception>
     public static bool TryValidate<TTarget>(TTarget target, bool recurse, out IDictionary<string, string[]> errors)
+    {
+        if (target is null)
+        {
+            throw new ArgumentNullException(nameof(target));
+        }
+
+        return TryValidate(target, recurse, allowAsync: false, out errors);
+    }
+
+    /// <summary>
+    /// Determines whether the specific object is valid.
+    /// </summary>
+    /// <typeparam name="TTarget"></typeparam>
+    /// <param name="target">The object to validate.</param>
+    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
+    /// <param name="allowAsync"><c>true</c> to allow asynchronous validation if an object in the graph requires it.</param>
+    /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation and <paramref name="allowAsync"/> is <c>false</c>.</exception>
+    public static bool TryValidate<TTarget>(TTarget target, bool recurse, bool allowAsync, out IDictionary<string, string[]> errors)
     {
         if (target is null)
         {
@@ -97,12 +118,25 @@ public static class MiniValidator
         var workingErrors = new Dictionary<string, List<string>>();
         var validateTask = TryValidateImpl(target, recurse, workingErrors, validatedObjects);
 
+        bool isValid;
+
         if (!validateTask.IsCompleted)
         {
-            throw new InvalidOperationException("Validation task was incomplete in synchronous path. This should never happen.");
-        }
+            if (!allowAsync)
+            {
+                throw new InvalidOperationException($"An object in the validation graph requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.");
+            }
 
-        var isValid = validateTask.GetAwaiter().GetResult();
+#if NET6_0_OR_GREATER
+            isValid = validateTask.AsTask().GetAwaiter().GetResult();
+#else
+            isValid = validateTask.GetAwaiter().GetResult();
+#endif
+        }
+        else
+        {
+            isValid = validateTask.GetAwaiter().GetResult();
+        }
 
         errors = MapToFinalErrorsResult(workingErrors);
 
@@ -218,11 +252,7 @@ public static class MiniValidator
             // If there's a null result it means this object is the one currently being validated
             // so just skip this reference to it by returning true. If there is a result it means
             // we already validated this object as part of this validation operation.
-#if NET6_0_OR_GREATER
             return !result.HasValue || result == true;
-#else
-            return !result.HasValue || result == true;
-#endif
         }
 
         // Add current target to tracking dictionary in null (validating) state
@@ -233,7 +263,7 @@ public static class MiniValidator
 
         var isValid = true;
         var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
-        ValidationContext propsValidationContext = new(target);
+        ValidationContext validationContext = new(target);
 
         foreach (var property in typeProperties)
         {
@@ -243,10 +273,10 @@ public static class MiniValidator
 
             if (property.HasValidationAttributes)
             {
-                propsValidationContext.MemberName = property.Name;
-                propsValidationContext.DisplayName = GetDisplayName(property);
+                validationContext.MemberName = property.Name;
+                validationContext.DisplayName = GetDisplayName(property);
                 validationResults ??= new();
-                var propertyIsValid = Validator.TryValidateValue(propertyValue!, propsValidationContext, validationResults, property.ValidationAttributes);
+                var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
 
                 if (!propertyIsValid)
                 {
@@ -307,8 +337,12 @@ public static class MiniValidator
         if (isValid && typeof(IValidatableObject).IsAssignableFrom(targetType))
         {
             var validatable = (IValidatableObject)target;
-            ValidationContext validatableValidationContext = new(target);
-            var validatableResults = validatable.Validate(validatableValidationContext);
+            
+            // Reset validation context
+            validationContext.MemberName = null;
+            validationContext.DisplayName = validationContext.ObjectType.Name;
+            
+            var validatableResults = validatable.Validate(validationContext);
             if (validatableResults is not null)
             {
                 ProcessValidationResults(validatableResults, workingErrors, prefix);
@@ -319,8 +353,12 @@ public static class MiniValidator
         if (isValid && typeof(IAsyncValidatableObject).IsAssignableFrom(targetType))
         {
             var validatable = (IAsyncValidatableObject)target;
-            ValidationContext validatableValidationContext = new(target);
-            var validatableResults = await validatable.ValidateAsync(validatableValidationContext).ConfigureAwait(false);
+
+            // Reset validation context
+            validationContext.MemberName = null;
+            validationContext.DisplayName = validationContext.ObjectType.Name;
+            
+            var validatableResults = await validatable.ValidateAsync(validationContext).ConfigureAwait(false);
             if (validatableResults is not null)
             {
                 ProcessValidationResults(validatableResults, workingErrors, prefix);
