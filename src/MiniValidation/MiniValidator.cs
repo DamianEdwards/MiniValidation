@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -29,15 +28,15 @@ public static class MiniValidator
     /// Determines if the specified <see cref="Type"/> has anything to validate.
     /// </summary>
     /// <remarks>
-    /// Objects of types with nothing to validate will always return <c>true</c> when passed to <see cref="TryValidate(object, out IDictionary{string, string[]})"/>.
+    /// Objects of types with nothing to validate will always return <c>true</c> when passed to <see cref="TryValidate{TTarget}(TTarget, bool, out IDictionary{string, string[]})"/>.
     /// </remarks>
     /// <param name="targetType">The <see cref="Type"/>.</param>
     /// <param name="recurse"><c>true</c> to recursively check descendant types; if <c>false</c> only simple values directly on the target type are checked.</param>
-    /// <returns><c>true</c> if the <see cref="Type"/> has anything to validate, <c>false</c> if not.</returns>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <returns><c>true</c> if <paramref name="targetType"/> has anything to validate, <c>false</c> if not.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="targetType"/> is <c>null</c>.</exception>
     public static bool RequiresValidation(Type targetType, bool recurse = true)
     {
-        if (targetType == null)
+        if (targetType is null)
         {
             throw new ArgumentNullException(nameof(targetType));
         }
@@ -53,10 +52,11 @@ public static class MiniValidator
     /// </summary>
     /// <param name="target">The object to validate.</param>
     /// <param name="errors">A dictionary that contains details of each failed validation.</param>
-    /// <returns><c>true</c> if the target object validates; otherwise <c>false</c>.</returns>
-    public static bool TryValidate(object target, out IDictionary<string, string[]> errors)
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    public static bool TryValidate<TTarget>(TTarget target, out IDictionary<string, string[]> errors)
     {
-        if (target == null)
+        if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
         }
@@ -68,14 +68,14 @@ public static class MiniValidator
     /// Determines whether the specific object is valid.
     /// </summary>
     /// <param name="target">The object to validate.</param>
-    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on the target object are validated.</param>
+    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
     /// <param name="errors">A dictionary that contains details of each failed validation.</param>
-    /// <returns><c>true</c> if the target object validates; otherwise <c>false</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <c>target</c> is <c>null</c>.</exception>
-    /// <exception cref="ArgumentException">Throw when <c>target</c> requires async validation.</exception>
-    public static bool TryValidate(object target, bool recurse, out IDictionary<string, string[]> errors)
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation.</exception>
+    public static bool TryValidate<TTarget>(TTarget target, bool recurse, out IDictionary<string, string[]> errors)
     {
-        if (target == null)
+        if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
         }
@@ -109,13 +109,39 @@ public static class MiniValidator
         return isValid;
     }
 
+    /// <summary>
+    /// Determines whether the specific object is valid.
+    /// </summary>
+    /// <param name="target">The object to validate.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
 #if NET6_0_OR_GREATER
-    public static async ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync(object target, bool recurse)
+    public static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target)
 #else
-    public static async Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync(object target, bool recurse)
+    public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target)
 #endif
     {
-        if (target == null)
+        if (target is null)
+        {
+            throw new ArgumentNullException(nameof(target));
+        }
+
+        return TryValidateAsync(target, recurse: true);
+    }
+
+    /// <summary>
+    /// Determines whether the specific object is valid.
+    /// </summary>
+    /// <param name="target">The object to validate.</param>
+    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c> and the validation errors.</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+#if NET6_0_OR_GREATER
+    public static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, bool recurse)
+#else
+    public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, bool recurse)
+#endif
+    {
+        if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
         }
@@ -127,14 +153,42 @@ public static class MiniValidator
             errors = _emptyErrors;
 
             // Return true for types with nothing to validate
-            return (true, errors);
+#if NET6_0_OR_GREATER
+            return ValueTask.FromResult((true, errors));
+#else
+            return Task.FromResult((true, errors));
+#endif
         }
 
         var validatedObjects = new Dictionary<object, bool?>();
         var workingErrors = new Dictionary<string, List<string>>();
-        var isValid = await TryValidateImpl(target, recurse, workingErrors, validatedObjects);
+        var validationTask = TryValidateImpl(target, recurse, workingErrors, validatedObjects);
 
-        errors = MapToFinalErrorsResult(workingErrors);
+        if (validationTask.IsCompleted)
+        {
+            var isValid = validationTask.GetAwaiter().GetResult();
+            errors = MapToFinalErrorsResult(workingErrors);
+
+#if NET6_0_OR_GREATER
+            return ValueTask.FromResult((isValid, errors));
+#else
+            return Task.FromResult((isValid, errors));
+#endif
+        }
+
+        // Handle async completion
+        return HandleTryValidateAsyncResult(validationTask, workingErrors);
+    }
+
+#if NET6_0_OR_GREATER
+    private static async ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> HandleTryValidateAsyncResult(ValueTask<bool> validationTask, Dictionary<string, List<string>> workingErrors)
+#else
+    private static async Task<(bool IsValid, IDictionary<string, string[]> Errors)> HandleTryValidateAsyncResult(Task<bool> validationTask, Dictionary<string, List<string>> workingErrors)
+#endif
+    {
+        var isValid = await validationTask;
+
+        var errors = MapToFinalErrorsResult(workingErrors);
 
         return (isValid, errors);
     }
@@ -152,13 +206,23 @@ public static class MiniValidator
         string? prefix = null,
         int currentDepth = 0)
     {
+        if (target is null)
+        {
+            throw new ArgumentNullException(nameof(target));
+        }
+
+        // Once we get to this point we have to box the target in order to track whether we've validated it or not
         if (validatedObjects.ContainsKey(target))
         {
             var result = validatedObjects[target];
             // If there's a null result it means this object is the one currently being validated
             // so just skip this reference to it by returning true. If there is a result it means
             // we already validated this object as part of this validation operation.
+#if NET6_0_OR_GREATER
             return !result.HasValue || result == true;
+#else
+            return !result.HasValue || result == true;
+#endif
         }
 
         // Add current target to tracking dictionary in null (validating) state
@@ -183,6 +247,7 @@ public static class MiniValidator
                 propsValidationContext.DisplayName = GetDisplayName(property);
                 validationResults ??= new();
                 var propertyIsValid = Validator.TryValidateValue(propertyValue!, propsValidationContext, validationResults, property.ValidationAttributes);
+
                 if (!propertyIsValid)
                 {
                     ProcessValidationResults(property.Name, validationResults, workingErrors, prefix);

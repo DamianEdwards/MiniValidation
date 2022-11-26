@@ -307,4 +307,18 @@ public class TryValidate
         Assert.Equal(1, errors.Count);
         Assert.Equal("", errors.Keys.First());
     }
+
+    [Fact]
+    public void Throws_ArgumentException_When_TryValidate_Called_On_Target_Requiring_Async()
+    {
+        var thingToValidate = new TestClassLevelAsyncValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        Assert.Throws<ArgumentException>("target", () =>
+        {
+            var isValid = MiniValidator.TryValidate(thingToValidate, out var errors);
+        });
+    }
 }
