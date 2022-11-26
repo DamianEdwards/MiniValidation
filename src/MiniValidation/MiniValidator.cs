@@ -186,7 +186,7 @@ public static class MiniValidator
     private static async Task<(bool IsValid, IDictionary<string, string[]> Errors)> HandleTryValidateAsyncResult(Task<bool> validationTask, Dictionary<string, List<string>> workingErrors)
 #endif
     {
-        var isValid = await validationTask;
+        var isValid = await validationTask.ConfigureAwait(false);
 
         var errors = MapToFinalErrorsResult(workingErrors);
 
@@ -229,7 +229,7 @@ public static class MiniValidator
         validatedObjects.Add(target, null);
 
         var targetType = target.GetType();
-        var (typeProperties, requiresAsync) = _typeDetailsCache.Get(targetType);
+        var (typeProperties, _) = _typeDetailsCache.Get(targetType);
 
         var isValid = true;
         var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
@@ -238,8 +238,8 @@ public static class MiniValidator
         foreach (var property in typeProperties)
         {
             var propertyValue = property.GetValue(target);
-            var propertyType = propertyValue?.GetType();
-            var propertyTypeCache = _typeDetailsCache.Get(propertyType);
+            var propertyValueType = propertyValue?.GetType();
+            var (properties, _) = _typeDetailsCache.Get(propertyValueType);
 
             if (property.HasValidationAttributes)
             {
@@ -254,8 +254,12 @@ public static class MiniValidator
                     isValid = false;
                 }
             }
+
             if (recurse && propertyValue is not null &&
-                (property.Recurse || typeof(IValidatableObject).IsAssignableFrom(propertyType) || propertyTypeCache.Properties.Any(p => p.Recurse)))
+                (property.Recurse
+                 || typeof(IValidatableObject).IsAssignableFrom(propertyValueType)
+                 || typeof(IAsyncValidatableObject).IsAssignableFrom(propertyValueType)
+                 || properties.Any(p => p.Recurse)))
             {
                 propertiesToRecurse!.Add(property, propertyValue);
             }
@@ -267,7 +271,8 @@ public static class MiniValidator
             if (target is IEnumerable)
             {
                 RuntimeHelpers.EnsureSufficientExecutionStack();
-                isValid = await TryValidateEnumerable(target, recurse, workingErrors, validatedObjects, validationResults, prefix, currentDepth) && isValid;
+                isValid = await TryValidateEnumerable(target, recurse, workingErrors, validatedObjects, validationResults, prefix, currentDepth).ConfigureAwait(false)
+                    && isValid;
             }
 
             // Validate complex properties
@@ -285,12 +290,14 @@ public static class MiniValidator
                         if (propertyDetails.IsEnumerable)
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}";
-                            isValid = await TryValidateEnumerable(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth) && isValid;
+                            isValid = await TryValidateEnumerable(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth).ConfigureAwait(false)
+                                && isValid;
                         }
                         else
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
-                            isValid = await TryValidateImpl(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1) && isValid;
+                            isValid = await TryValidateImpl(propertyValue, recurse, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1).ConfigureAwait(false)
+                                && isValid;
                         }
                     }
                 }
@@ -313,7 +320,7 @@ public static class MiniValidator
         {
             var validatable = (IAsyncValidatableObject)target;
             ValidationContext validatableValidationContext = new(target);
-            var validatableResults = await validatable.ValidateAsync(validatableValidationContext);
+            var validatableResults = await validatable.ValidateAsync(validatableValidationContext).ConfigureAwait(false);
             if (validatableResults is not null)
             {
                 ProcessValidationResults(validatableResults, workingErrors, prefix);
@@ -359,7 +366,7 @@ public static class MiniValidator
 
                 var itemPrefix = $"{prefix}[{index}].";
 
-                isValid = await TryValidateImpl(item, recurse, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
+                isValid = await TryValidateImpl(item, recurse, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1).ConfigureAwait(false);
 
                 if (!isValid)
                 {
@@ -373,8 +380,11 @@ public static class MiniValidator
 
     private static IDictionary<string, string[]> MapToFinalErrorsResult(Dictionary<string, List<string>> workingErrors)
     {
+#if NET6_0_OR_GREATER
+        var result = new AdaptiveCapacityDictionary<string, string[]>(workingErrors.Count);
+#else
         var result = new Dictionary<string, string[]>(workingErrors.Count);
-
+#endif
         foreach (var fieldError in workingErrors)
         {
             if (!result.ContainsKey(fieldError.Key))
