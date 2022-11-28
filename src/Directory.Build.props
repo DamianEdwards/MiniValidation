@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <VersionPrefix>0.7.0</VersionPrefix>
-    <VersionSuffix Condition="'$(BuildNumber)' == ''">pre</VersionSuffix>
-    <VersionSuffix Condition="'$(BuildNumber)' != ''">pre.$(BuildNumber)</VersionSuffix>
+    <VersionSuffix>dev</VersionSuffix>
+    <VersionSuffix Condition="'$(VersionSuffix)' != '' and '$(BuildNumber)' != ''">$(VersionSuffix).$(BuildNumber)</VersionSuffix>
     <Authors>Damian Edwards</Authors>
     <Copyright>Copyright © Damian Edwards</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
