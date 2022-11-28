@@ -132,6 +132,11 @@ class TestValidatableChildType : TestChildType, IValidatableObject
     }
 }
 
+class TestTypeWithAsyncChild
+{
+    public TestAsyncValidatableChildType? NeedsAsync { get; set; }
+}
+
 class TestAsyncValidatableChildType : TestChildType, IAsyncValidatableObject
 {
     public int TwentyOrMore { get; set; } = 20;

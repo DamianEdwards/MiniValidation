@@ -369,6 +369,50 @@ public class Recursion
     }
 
     [Fact]
+    public void Throws_InvalidOperationException_When_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
+    {
+        var thingToValidate = new TestTypeWithAsyncChild
+        {
+            NeedsAsync = new() { TwentyOrMore = 12 }
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+        {
+            var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+        });
+    }
+
+    [Fact]
+    public async Task Invalid_When_AsyncValidatableOnlyChild_Is_Invalid()
+    {
+        var thingToValidate = new TestTypeWithAsyncChild
+        {
+            NeedsAsync = new() { TwentyOrMore = 12 }
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
+
+        Assert.False(isValid);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestTypeWithAsyncChild.NeedsAsync)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Invalid_When_AsyncValidatableOnlyChild_Is_Invalid_Allowing_SyncOverAsync()
+    {
+        var thingToValidate = new TestTypeWithAsyncChild
+        {
+            NeedsAsync = new() { TwentyOrMore = 12 }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: true, allowAsync: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestTypeWithAsyncChild.NeedsAsync)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
     public void Throws_InvalidOperationException_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
     {
         var thingToValidate = new TestValidatableType
@@ -395,5 +439,20 @@ public class Recursion
         Assert.False(result);
         Assert.Equal(1, errors.Count);
         Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestValidatableOnlyType.TwentyOrMore)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task Invalid_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid()
+    {
+        var thingToValidate = new TestValidatableType
+        {
+            PocoChild = new TestAsyncValidatableChildType { TwentyOrMore = 12 }
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
+
+        Assert.False(isValid);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
     }
 }
