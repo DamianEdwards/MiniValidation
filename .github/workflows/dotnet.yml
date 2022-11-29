@@ -38,16 +38,16 @@ jobs:
       run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+      run: dotnet build --configuration Release --no-restore
 
     - name: Test
       run: dotnet test --verbosity normal
 
     - name: Pack (ci)
-      run: dotnet pack --configuration Release --output artifacts/ci --verbosity d -p:VersionSuffix="ci.$BUILD_NUMBER" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+      run: dotnet pack --configuration Release --output artifacts/ci --verbosity d -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
     - name: Pack (ship candidate)
-      run: dotnet pack --configuration Release --output artifacts/ship --verbosity d -p:VersionSuffix="" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+      run: dotnet pack --configuration Release --output artifacts/ship --verbosity d -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true -p:IsShipCandidate=true
 
     - name: Publish artifacts
       uses: actions/upload-artifact@master
