@@ -5,6 +5,9 @@ class TestType
     [Required]
     public string? RequiredName { get; set; } = "Default";
 
+    [Required, Display(Name = "Required name")]
+    public string? RequiredNameWithDisplay { get; set; } = "Default";
+
     [Range(10, 100)]
     public int TenOrMore { get; set; } = 10;
 
@@ -66,6 +69,26 @@ class TestClassLevelValidatableOnlyType : IValidatableObject
     }
 }
 
+class TestClassLevelAsyncValidatableOnlyType : IAsyncValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public async Task<IEnumerable<ValidationResult>> ValidateAsync(ValidationContext validationContext)
+    {
+        await Task.Yield();
+
+        List<ValidationResult>? errors = null;
+
+        if (TwentyOrMore < 20)
+        {
+            errors ??= new List<ValidationResult>();
+            errors.Add(new ValidationResult($"The field {validationContext.DisplayName} must have a value greater than 20."));
+        }
+
+        return errors ?? Enumerable.Empty<ValidationResult>();
+    }
+}
+
 class TestChildType
 {
     [Required]
@@ -109,6 +132,30 @@ class TestValidatableChildType : TestChildType, IValidatableObject
     }
 }
 
+class TestTypeWithAsyncChild
+{
+    public TestAsyncValidatableChildType? NeedsAsync { get; set; }
+}
+
+class TestAsyncValidatableChildType : TestChildType, IAsyncValidatableObject
+{
+    public int TwentyOrMore { get; set; } = 20;
+
+    public async Task<IEnumerable<ValidationResult>> ValidateAsync(ValidationContext validationContext)
+    {
+        await Task.Yield();
+
+        List<ValidationResult>? result = null;
+        if (TwentyOrMore < 20)
+        {
+            result ??= new();
+            result.Add(new ($"The field {validationContext.DisplayName} must have a value greater than 20.", new[] { nameof(TwentyOrMore) }));
+        }
+
+        return result ?? Enumerable.Empty<ValidationResult>();
+    }
+}
+
 class TestChildTypeDerivative : TestChildType
 {
     public override string? RequiredCategory { get; set; } = "Derived Default";
@@ -139,3 +186,7 @@ struct TestStruct
 }
 
 interface IAnInterface { }
+
+#if NET6_0_OR_GREATER
+record TestRecordType([Required, Display(Name = "Required name")] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10);
+#endif

@@ -11,7 +11,6 @@ on:
 
 env:
   DOTNET_SDK_SIX_VERSION: 6.0.x
-  DOTNET_SDK_FIVE_VERSION: 5.0.x
   DOTNET_SDK_THREE_VERSION: 3.1.x
 
 jobs:
@@ -22,15 +21,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup .NET SDK (global.json version)
+      uses: actions/setup-dotnet@v1
+
     - name: Setup .NET SDK ${{ env.DOTNET_SDK_SIX_VERSION }}
       uses: actions/setup-dotnet@v1
       with:
           dotnet-version: ${{ env.DOTNET_SDK_SIX_VERSION }}
-
-    - name: Setup .NET SDK ${{ env.DOTNET_SDK_FIVE_VERSION }}
-      uses: actions/setup-dotnet@v1
-      with:
-          dotnet-version: ${{ env.DOTNET_SDK_FIVE_VERSION }}
 
     - name: Setup .NET SDK ${{ env.DOTNET_SDK_THREE_VERSION }}
       uses: actions/setup-dotnet@v1
@@ -47,19 +44,22 @@ jobs:
       run: echo "BUILD_NUMBER=$NOW.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
+      run: dotnet build --configuration Release --no-restore -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
     - name: Test
       run: dotnet test --verbosity normal
 
-    - name: Pack
-      run: dotnet pack --no-build --configuration Release --output finalpackage --verbosity d /p:BuildNumber=$BUILD_NUMBER /p:SourceRevisionId=$GITHUB_SHA /p:ContinuousIntegrationBuild=true
+    - name: Pack (ci)
+      run: dotnet pack --no-build --configuration Release --output artifacts/ci --verbosity d -p:VersionSuffix="ci" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
-    - name: Publish artifact
+    - name: Pack (ship candidate)
+      run: dotnet pack --configuration Release --output artifacts/ship --verbosity d -p:VersionSuffix="" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+
+    - name: Publish artifacts
       uses: actions/upload-artifact@master
       with:
         name: nupkg
-        path: finalpackage
+        path: artifacts/**/*.nupkg
 
   deploy:
     needs: build
@@ -72,15 +72,13 @@ jobs:
         with:
           name: nupkg
 
+      - name: Setup .NET SDK (global.json version)
+        uses: actions/setup-dotnet@v1
+
       - name: Setup .NET SDK ${{ env.DOTNET_SDK_SIX_VERSION }}
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: ${{ env.DOTNET_SDK_SIX_VERSION }}
-
-      - name: Setup .NET SDK ${{ env.DOTNET_SDK_FIVE_VERSION }}
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_SDK_FIVE_VERSION }}
 
       - name: Setup .NET SDK ${{ env.DOTNET_SDK_THREE_VERSION }}
         uses: actions/setup-dotnet@v1
@@ -91,7 +89,7 @@ jobs:
         run: dotnet nuget add source --username ${{ secrets.GPR_USERNAME }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name GPR ${{ secrets.GPR_URI }}
 
       - name: Push to GitHub Packages
-        run: dotnet nuget push **/*.nupkg -s "GPR" --skip-duplicate
+        run: dotnet nuget push **/ci/*.nupkg -s "GPR" --skip-duplicate
 
   clean:
     needs: deploy
@@ -105,6 +103,3 @@ jobs:
           keep: 5
           names: |
             MiniValidation
-            MiniValidation.AspNetCore
-            MinimalValidation
-            MinimalValidation.AspNetCore

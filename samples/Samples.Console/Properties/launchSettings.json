@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Samples.Console": {
+      "commandName": "Project",
+      "commandLineArgs": "widget"
+    }
+  }
+}

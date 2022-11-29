@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace MiniValidation.UnitTests;
 
 public class TryValidate
@@ -68,6 +70,30 @@ public class TryValidate
         Assert.Equal(0, errors.Count);
     }
 
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void NonRequiredValidator_Valid_When_Valid_On_Record()
+    {
+        var thingToValidate = new TestRecordType(TenOrMore: 11);
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void NonRequiredValidator_Invalid_When_Invalid_On_Record()
+    {
+        var thingToValidate = new TestRecordType(TenOrMore: 9);
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+    }
+#endif
+
     [Fact]
     public void MultipleValidators_Valid_When_All_Valid()
     {
@@ -111,6 +137,38 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(2, errors.Count);
     }
+
+    [Fact]
+    public void Validator_DisplayAttribute_Name_Used_In_Error_Message()
+    {
+        var thingToValidate = new TestType { RequiredNameWithDisplay = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Collection(errors,
+            entry => Assert.Collection(entry.Value,
+                error => Assert.Contains("Required name", error)
+            )
+        );
+    }
+
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void Validator_DisplayAttribute_Name_Used_In_Error_Message_For_Record()
+    {
+        var thingToValidate = new TestRecordType("");
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Collection(errors,
+            entry => Assert.Collection(entry.Value,
+                error => Assert.Contains("Required name", error)
+            )
+        );
+    }
+#endif
 
     [Fact]
     public void List_Invalid_When_Entry_Invalid()
@@ -233,5 +291,34 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(1, errors.Count);
         Assert.Equal("", errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task Invalid_When_AsyncValidatableObject_With_Class_Level_Only_Is_Invalid()
+    {
+        var thingToValidate = new TestClassLevelAsyncValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, true);
+
+        Assert.False(isValid);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal("", errors.Keys.First());
+    }
+
+    [Fact]
+    public void Throws_ArgumentException_When_TryValidate_Called_On_Target_Requiring_Async()
+    {
+        var thingToValidate = new TestClassLevelAsyncValidatableOnlyType
+        {
+            TwentyOrMore = 12
+        };
+
+        Assert.Throws<ArgumentException>("target", () =>
+        {
+            var isValid = MiniValidator.TryValidate(thingToValidate, out var errors);
+        });
     }
 }

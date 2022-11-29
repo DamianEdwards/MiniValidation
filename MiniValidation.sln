@@ -20,20 +20,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4CF82AD1
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.UnitTests", "tests\MiniValidation.UnitTests\MiniValidation.UnitTests.csproj", "{4D247E44-6CF5-4A15-A2D3-09E40753874B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{49CE073E-74D6-40FC-8D9D-6FEA3946B1C9}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{68B9C62A-A89E-468C-9635-BD4FB3307F70}"
-	ProjectSection(SolutionItems) = preProject
-		.github\workflows\dotnet-ci.yml = .github\workflows\dotnet-ci.yml
-		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CDE0DB87-BF92-4F36-B305-B73CE116DD45}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
 		global.json = global.json
+		LICENSE = LICENSE
 		README.md = README.md
+		ThirdPartyNotices.txt = ThirdPartyNotices.txt
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniValidation.Benchmarks", "tests\MiniValidation.Benchmarks\MiniValidation.Benchmarks.csproj", "{AFA1AA61-E230-48C8-B12B-6561E2124210}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +53,10 @@ Global
 		{4D247E44-6CF5-4A15-A2D3-09E40753874B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4D247E44-6CF5-4A15-A2D3-09E40753874B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4D247E44-6CF5-4A15-A2D3-09E40753874B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFA1AA61-E230-48C8-B12B-6561E2124210}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFA1AA61-E230-48C8-B12B-6561E2124210}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFA1AA61-E230-48C8-B12B-6561E2124210}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFA1AA61-E230-48C8-B12B-6561E2124210}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -66,7 +66,7 @@ Global
 		{75062336-DE25-4EBF-9EC5-0465D37D4623} = {BF473532-A97B-4CEE-9673-9D4B57D8C1C4}
 		{DBDC0E13-44E1-42E8-8751-FF5D3313D538} = {BF473532-A97B-4CEE-9673-9D4B57D8C1C4}
 		{4D247E44-6CF5-4A15-A2D3-09E40753874B} = {4CF82AD1-D050-422E-99D5-454AE28D6A11}
-		{68B9C62A-A89E-468C-9635-BD4FB3307F70} = {49CE073E-74D6-40FC-8D9D-6FEA3946B1C9}
+		{AFA1AA61-E230-48C8-B12B-6561E2124210} = {4CF82AD1-D050-422E-99D5-454AE28D6A11}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {23EC839A-3D4A-43DC-A6B4-A641D51BF0A6}

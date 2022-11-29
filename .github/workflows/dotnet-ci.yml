@@ -17,7 +17,6 @@ on:
 
 env:
   DOTNET_SDK_SIX_VERSION: 6.0.x
-  DOTNET_SDK_FIVE_VERSION: 5.0.x
   DOTNET_SDK_THREE_VERSION: 3.1.x
 
 jobs:
@@ -28,15 +27,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup .NET SDK (global.json version)
+      uses: actions/setup-dotnet@v1
+
     - name: Setup .NET SDK ${{ env.DOTNET_SDK_SIX_VERSION }}
       uses: actions/setup-dotnet@v1
       with:
           dotnet-version: ${{ env.DOTNET_SDK_SIX_VERSION }}
-
-    - name: Setup .NET SDK ${{ env.DOTNET_SDK_FIVE_VERSION }}
-      uses: actions/setup-dotnet@v1
-      with:
-          dotnet-version: ${{ env.DOTNET_SDK_FIVE_VERSION }}
 
     - name: Setup .NET SDK ${{ env.DOTNET_SDK_THREE_VERSION }}
       uses: actions/setup-dotnet@v1
