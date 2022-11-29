@@ -11,7 +11,6 @@ on:
 
 env:
   DOTNET_SDK_SIX_VERSION: 6.0.x
-  DOTNET_SDK_THREE_VERSION: 3.1.x
 
 jobs:
   build:
@@ -29,11 +28,6 @@ jobs:
       with:
           dotnet-version: ${{ env.DOTNET_SDK_SIX_VERSION }}
 
-    - name: Setup .NET SDK ${{ env.DOTNET_SDK_THREE_VERSION }}
-      uses: actions/setup-dotnet@v1
-      with:
-          dotnet-version: ${{ env.DOTNET_SDK_THREE_VERSION }}
-
     - name: Restore dependencies
       run: dotnet restore
 
@@ -50,7 +44,7 @@ jobs:
       run: dotnet test --verbosity normal
 
     - name: Pack (ci)
-      run: dotnet pack --no-build --configuration Release --output artifacts/ci --verbosity d -p:VersionSuffix="ci" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+      run: dotnet pack --configuration Release --output artifacts/ci --verbosity d -p:VersionSuffix="ci" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
     - name: Pack (ship candidate)
       run: dotnet pack --configuration Release --output artifacts/ship --verbosity d -p:VersionSuffix="" -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
