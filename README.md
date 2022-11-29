@@ -8,7 +8,7 @@ Supports .NET Standard 2.0 compliant runtimes.
 
 Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ``` console
-❯ dotnet add package MiniValidation --prerelease
+❯ dotnet add package MiniValidation
 ```
 
 ### ASP.NET Core 6+ Projects
