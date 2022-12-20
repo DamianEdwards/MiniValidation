@@ -21,7 +21,7 @@ jobs:
       packShipCandidate: true
 
   deploy:
-    name: Deploy NuGet package to repo artifacts
+    name: Deploy
     needs: build
     runs-on: ubuntu-latest
 
