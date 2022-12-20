@@ -9,10 +9,12 @@ var widgets = new List<Widget>
     new WidgetWithCustomValidation { Name = title }
 };
 
+var allValid = true;
 foreach (var widget in widgets)
 {
     if (!MiniValidator.TryValidate(widget, out var errors))
     {
+        allValid = false;
         Console.WriteLine($"{nameof(Widget)} has errors!");
         foreach (var entry in errors)
         {
@@ -28,6 +30,8 @@ foreach (var widget in widgets)
         Console.WriteLine($"{nameof(Widget)} '{widget}' is valid!");
     }
 }
+
+return allValid ? 0 : 1;
 
 class Widget
 {
