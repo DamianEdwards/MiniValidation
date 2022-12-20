@@ -21,7 +21,7 @@ jobs:
       packShipCandidate: true
 
   deploy:
-    name: Deploy NuGet package to repo artifacts & sample site to Azure
+    name: Deploy NuGet package to repo artifacts
     needs: build
     runs-on: ubuntu-latest
 

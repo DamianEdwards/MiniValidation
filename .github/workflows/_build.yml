@@ -38,7 +38,7 @@ jobs:
 
     - name: Publish samples
       run: |
-        for projectPath in ./samples/**/*.csproj ;
+        for projectPath in ./samples/**/*.csproj ; do
           projectFileName=${projectPath##*/}
           projectName=${projectFileName%.*}
           dotnet publish "$projectPath" --output "./artifacts/$projectName" --configuration Release --no-build --verbosity normal
