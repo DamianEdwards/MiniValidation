@@ -53,11 +53,13 @@ internal class TypeDetailsCache
 
         // Find a constructor that matches the Deconstruct method (this will be the primary constuctor for record types)
         ParameterInfo[]? primaryCtorParams = null;
-        if (type.GetMethod("Deconstruct") is { } deconstruct)
+        foreach (var ctor in type.GetConstructors())
         {
-            // Parameters to Deconstruct are 'byref' so need to call GetElementType() to get underlying type
-            var deconstructParams = deconstruct.GetParameters().Select(p => p.ParameterType.GetElementType() ?? p.ParameterType).ToArray();
-            if (type.GetConstructor(deconstructParams) is { } ctor)
+            if (ctor.DeclaringType != type) continue;
+
+            // Parameters to Deconstruct are 'byref' so need to call MakeByRefType()
+            var deconstructParams = ctor.GetParameters().Select(p => p.ParameterType.MakeByRefType()).ToArray();
+            if (type.GetMethod("Deconstruct", deconstructParams) is { } deconstruct && deconstruct.DeclaringType == type)
             {
                 primaryCtorParams = ctor.GetParameters();
             }
