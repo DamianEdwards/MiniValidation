@@ -188,5 +188,13 @@ struct TestStruct
 interface IAnInterface { }
 
 #if NET6_0_OR_GREATER
-record TestRecordType([Required, Display(Name = "Required name")] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10);
+abstract record BaseRecordType(string Type);
+
+record TestRecordType([Required, Display(Name = "Required name")] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10)
+    : BaseRecordType(nameof(TestRecordType))
+{
+    public TestRecordType(string anotherParam, bool doTheThing) : this("Another name", 23)
+    {
+    }
+};
 #endif
