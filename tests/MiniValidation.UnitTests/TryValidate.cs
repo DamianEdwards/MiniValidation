@@ -321,4 +321,27 @@ public class TryValidate
             var isValid = MiniValidator.TryValidate(thingToValidate, out var errors);
         });
     }
+
+    [Fact]
+    public void Valid_When_Target_Has_Required_Uri_Property()
+    {
+        var thingToValidate = new ClassWithUri { BaseAddress = new("https://example.com") };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void Inalid_When_Target_Has_Required_Uri_Property_With_Null_Value()
+    {
+        var thingToValidate = new ClassWithUri();
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(ClassWithUri.BaseAddress), errors.Keys.First());
+    }
 }

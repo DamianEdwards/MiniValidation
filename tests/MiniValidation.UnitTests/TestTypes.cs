@@ -198,3 +198,9 @@ record TestRecordType([Required, Display(Name = "Required name")] string Require
     }
 };
 #endif
+
+class ClassWithUri
+{
+    [Required]
+    public Uri? BaseAddress { get; set; }
+}

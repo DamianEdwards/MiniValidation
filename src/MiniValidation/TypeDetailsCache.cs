@@ -58,7 +58,7 @@ internal class TypeDetailsCache
             if (ctor.DeclaringType != type) continue;
 
             // Parameters to Deconstruct are 'byref' so need to call MakeByRefType()
-            var deconstructParams = ctor.GetParameters().Select(p => p.ParameterType.MakeByRefType()).ToArray();
+            var deconstructParams = ctor.GetParameters().Select(p => p.ParameterType.IsByRef ? p.ParameterType : p.ParameterType.MakeByRefType()).ToArray();
             if (type.GetMethod("Deconstruct", deconstructParams) is { } deconstruct && deconstruct.DeclaringType == type)
             {
                 primaryCtorParams = ctor.GetParameters();
