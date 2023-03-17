@@ -334,7 +334,18 @@ public class TryValidate
     }
 
     [Fact]
-    public void Inalid_When_Target_Has_Required_Uri_Property_With_Null_Value()
+    public void Valid_When_Target_Has_Required_Uri_Property_With_UriKind_Relative_Value()
+    {
+        var thingToValidate = new ClassWithUri { BaseAddress = new("/a/relative/path", UriKind.Relative) };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
+
+    [Fact]
+    public void Invalid_When_Target_Has_Required_Uri_Property_With_Null_Value()
     {
         var thingToValidate = new ClassWithUri();
 

@@ -46,6 +46,12 @@ internal class TypeDetailsCache
             return;
         }
 
+        if (DoNotValidatePropertiesOf(type))
+        {
+            _cache[type] = (_emptyPropertyDetails, false);
+            return;
+        }
+
         if (typeof(IAsyncValidatableObject).IsAssignableFrom(type))
         {
             requiresAsync = true;
@@ -138,6 +144,34 @@ internal class TypeDetailsCache
         _cache[type] = (propertiesToValidate?.ToArray() ?? _emptyPropertyDetails, requiresAsync);
     }
 
+    private static bool DoNotValidatePropertiesOf(Type type) =>
+        type == typeof(object)
+        || type.IsPrimitive
+        || type.IsArray
+        || type.IsPointer
+        || type.IsEnum
+        || type == typeof(string)
+        || type == typeof(char)
+        || type == typeof(bool)
+        || type == typeof(byte)
+        || type == typeof(sbyte)
+        || type == typeof(short)
+        || type == typeof(ushort)
+        || type == typeof(int)
+        || type == typeof(uint)
+        || type == typeof(long)
+        || type == typeof(ulong)
+        || type == typeof(float)
+        || type == typeof(double)
+        || type == typeof(decimal)
+        || type == typeof(DateTime)
+        || type == typeof(DateTimeOffset)
+#if NET6_0_OR_GREATER
+        || type == typeof(DateOnly)
+        || type == typeof(TimeOnly)
+#endif
+        ;
+
     private static (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(ParameterInfo[]? primaryCtorParameters, PropertyInfo property)
     {
         List<ValidationAttribute>? validationAttributes = null;
@@ -206,6 +240,8 @@ internal class TypeDetailsCache
 internal record PropertyDetails(string Name, DisplayAttribute? DisplayAttribute, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
 {
     public object? GetValue(object target) => PropertyGetter(target);
+
     public bool IsEnumerable => EnumerableType != null;
+
     public bool HasValidationAttributes => ValidationAttributes.Length > 0;
 }
