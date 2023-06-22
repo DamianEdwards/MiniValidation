@@ -56,12 +56,7 @@ public static class MiniValidator
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, out IDictionary<string, string[]> errors)
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
-        return TryValidate(target, recurse: true, allowAsync: false, out errors);
+        return TryValidateImpl(target, null, recurse: true, allowAsync: false, out errors);
     }
 
     /// <summary>
@@ -74,17 +69,12 @@ public static class MiniValidator
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, IServiceProvider serviceProvider, out IDictionary<string, string[]> errors)
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
         if (serviceProvider is null)
         {
             throw new ArgumentNullException(nameof(serviceProvider));
         }
 
-        return TryValidate(target, serviceProvider, recurse: true, allowAsync: false, out errors);
+        return TryValidateImpl(target, serviceProvider, recurse: true, allowAsync: false, out errors);
     }
 
     /// <summary>
@@ -98,12 +88,7 @@ public static class MiniValidator
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, bool recurse, out IDictionary<string, string[]> errors)
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
-        return TryValidate(target, recurse, allowAsync: false, out errors);
+        return TryValidateImpl(target, null, recurse, allowAsync: false, out errors);
     }
 
     /// <summary>
@@ -118,17 +103,12 @@ public static class MiniValidator
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, IServiceProvider serviceProvider, bool recurse, out IDictionary<string, string[]> errors)
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
         if (serviceProvider is null)
         {
             throw new ArgumentNullException(nameof(serviceProvider));
         }
 
-        return TryValidate(target, serviceProvider, recurse, allowAsync: false, out errors);
+        return TryValidateImpl(target, serviceProvider, recurse, allowAsync: false, out errors);
     }
 
     /// <summary>
@@ -144,12 +124,7 @@ public static class MiniValidator
     /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation and <paramref name="allowAsync"/> is <c>false</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, bool recurse, bool allowAsync, out IDictionary<string, string[]> errors)
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
-        return TryValidate(target, null, recurse, allowAsync, out errors);
+        return TryValidateImpl(target, null, recurse, allowAsync, out errors);
     }
 
     /// <summary>
@@ -165,6 +140,23 @@ public static class MiniValidator
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation and <paramref name="allowAsync"/> is <c>false</c>.</exception>
     public static bool TryValidate<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse, bool allowAsync, out IDictionary<string, string[]> errors)
+    {
+        return TryValidateImpl(target, serviceProvider, recurse, allowAsync, out errors);
+    }
+
+    /// <summary>
+    /// Determines whether the specific object is valid.
+    /// </summary>
+    /// <typeparam name="TTarget"></typeparam>
+    /// <param name="target">The object to validate.</param>
+    /// <param name="serviceProvider">The service provider to use when creating ValidationContext.</param>
+    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
+    /// <param name="allowAsync"><c>true</c> to allow asynchronous validation if an object in the graph requires it.</param>
+    /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation and <paramref name="allowAsync"/> is <c>false</c>.</exception>
+    private static bool TryValidateImpl<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse, bool allowAsync, out IDictionary<string, string[]> errors)
     {
         if (target is null)
         {
@@ -224,12 +216,7 @@ public static class MiniValidator
     public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target)
 #endif
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
-        return TryValidateAsync(target, recurse: true);
+        return TryValidateImplAsync(target, null, recurse: true);
     }
 
     /// <summary>
@@ -244,18 +231,14 @@ public static class MiniValidator
     public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider serviceProvider)
 #endif
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
         if (serviceProvider is null)
         {
             throw new ArgumentNullException(nameof(serviceProvider));
         }
 
-        return TryValidateAsync(target, serviceProvider, recurse: true);
+        return TryValidateImplAsync(target, serviceProvider, recurse: true);
     }
+
     /// <summary>
     /// Determines whether the specific object is valid.
     /// </summary>
@@ -269,12 +252,7 @@ public static class MiniValidator
     public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, bool recurse)
 #endif
     {
-        if (target is null)
-        {
-            throw new ArgumentNullException(nameof(target));
-        }
-
-        return TryValidateAsync(target, null, recurse);
+        return TryValidateImplAsync(target, null, recurse);
     }
 
     /// <summary>
@@ -289,6 +267,23 @@ public static class MiniValidator
     public static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
 #else
     public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
+#endif
+    {
+        return TryValidateImplAsync(target, serviceProvider, recurse);
+    }
+
+    /// <summary>
+    /// Determines whether the specific object is valid.
+    /// </summary>
+    /// <param name="target">The object to validate.</param>
+    /// <param name="serviceProvider">The service provider to use when creating ValidationContext.</param>
+    /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c> and the validation errors.</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+#if NET6_0_OR_GREATER
+    private static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
+#else
+    private static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
 #endif
     {
         if (target is null)
