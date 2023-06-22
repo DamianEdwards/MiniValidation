@@ -40,6 +40,8 @@ class Widget
 ```csharp
 var widget = new Widget { Name = "" };
 
+// Get your serviceProvider from wherever makes sense
+var serviceProvider = ...
 var isValid = MiniValidator.TryValidate(widget, serviceProvider, out var errors);
 
 class Widget : IValidatableObject
