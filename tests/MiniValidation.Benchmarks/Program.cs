@@ -6,6 +6,7 @@ using MiniValidation;
 
 BenchmarkRunner.Run<Benchmarks>();
 
+#pragma warning disable CA1050 // Declare types in namespaces
 //[SimpleJob(RuntimeMoniker.Net472)]
 //[SimpleJob(RuntimeMoniker.Net60)]
 [SimpleJob(RuntimeMoniker.Net70, baseline: true)]
@@ -13,6 +14,7 @@ BenchmarkRunner.Run<Benchmarks>();
 public class Benchmarks
 {
     [GlobalSetup]
+#pragma warning disable CA1822 // Mark members as static
     public void Initialize()
     {
         // Prime the internal type cache of MiniValidator
@@ -65,6 +67,7 @@ public class Benchmarks
         var isValid = MiniValidator.TryValidate(target, out var errors);
         return (isValid, errors);
     }
+#pragma warning restore CA1822 // Mark members as static
 }
 
 public class BenchmarkTypes
@@ -101,3 +104,4 @@ public class BenchmarkTypes
         public string Name { get; set; } = default!;
     }
 }
+#pragma warning restore CA1050 // Declare types in namespaces
