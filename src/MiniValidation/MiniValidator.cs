@@ -79,6 +79,11 @@ public static class MiniValidator
             throw new ArgumentNullException(nameof(target));
         }
 
+        if (serviceProvider is null)
+        {
+            throw new ArgumentNullException(nameof(serviceProvider));
+        }
+
         return TryValidate(target, serviceProvider, recurse: true, allowAsync: false, out errors);
     }
 
@@ -116,6 +121,11 @@ public static class MiniValidator
         if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
+        }
+
+        if (serviceProvider is null)
+        {
+            throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         return TryValidate(target, serviceProvider, recurse, allowAsync: false, out errors);
@@ -231,12 +241,17 @@ public static class MiniValidator
 #if NET6_0_OR_GREATER
     public static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider serviceProvider)
 #else
-    public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider)
+    public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider serviceProvider)
 #endif
     {
         if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
+        }
+
+        if (serviceProvider is null)
+        {
+            throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         return TryValidateAsync(target, serviceProvider, recurse: true);
