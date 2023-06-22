@@ -14,12 +14,60 @@ Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ### ASP.NET Core 6+ Projects
 If installing into an ASP.NET Core 6+ project, consider using the [MinimalApis.Extensions](https://www.nuget.org/packages/MinimalApis.Extensions) package instead, which adds extensions specific to ASP.NET Core, including a validation endpoint filter for .NET 7 apps:
 ``` console
-❯ dotnet add package MinimalApis.Extensions --prerelease
+❯ dotnet add package MinimalApis.Extensions
 ```
 
 ## Example usage
 
+### Validate an object
+
+```csharp
+var widget = new Widget { Name = "" };
+
+var isValid = MiniValidator.TryValidate(widget, out var errors);
+
+class Widget
+{
+    [Required, MinLength(3)]
+    public string Name { get; set; }
+
+    public override string ToString() => Name;
+}
+```
+
+### Use services from validators
+
+```csharp
+var widget = new Widget { Name = "" };
+
+var isValid = MiniValidator.TryValidate(widget, serviceProvider, out var errors);
+
+class Widget : IValidatableObject
+{
+    [Required, MinLength(3)]
+    public string Name { get; set; }
+
+    public override string ToString() => Name;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var disallowedNamesService = validationContext.GetService(typeof(IDisallowedNamesService)) as IDisallowedNamesService;
+
+        if (disallowedNamesService is null)
+        {
+            throw new InvalidOperationException($"Validation of {nameof(Widget)} requires an {nameof(IDisallowedNamesService)} instance.");
+        }
+
+        if (disallowedNamesService.IsDisallowedName(Name))
+        {
+            yield return new($"Cannot name a widget '{Name}'.", new[] { nameof(Name) });
+        }
+    }
+}
+```
+
 ### Console app
+
 ```csharp
 using System.ComponentModel.DataAnnotations;
 using MiniValidation;
@@ -146,5 +194,4 @@ class WidgetWithCustomValidation : Widget, IValidatableObject
         }
     }
 }
-
 ```
