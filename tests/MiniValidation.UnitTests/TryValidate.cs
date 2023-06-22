@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MiniValidation.UnitTests;
 
@@ -354,5 +355,45 @@ public class TryValidate
         Assert.False(result);
         Assert.Equal(1, errors.Count);
         Assert.Equal(nameof(ClassWithUri.BaseAddress), errors.Keys.First());
+    }
+
+    [Fact]
+    public void TryValidate_With_ServiceProvider()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<TestService>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassLevelValidatableOnlyTypeWithServiceProvider();
+
+        var result = MiniValidator.TryValidate(thingToValidate, serviceProvider, out var errors);
+        Assert.True(result);
+
+        errors.Clear();
+        result = MiniValidator.TryValidate(thingToValidate, out errors);
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task TryValidateAsync_With_ServiceProvider()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<TestService>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassLevelValidatableOnlyTypeWithServiceProvider();
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, serviceProvider);
+
+        Assert.True(isValid);
+        Assert.Equal(0, errors.Count);
+
+        errors.Clear();
+        (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
+        Assert.False(isValid);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
     }
 }
