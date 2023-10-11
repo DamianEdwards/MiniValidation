@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
@@ -198,6 +199,11 @@ internal class TypeDetailsCache
             ? paramAttributes.Concat(propertyAttributes)
             : propertyAttributes;
 
+        if (TryGetAttributesViaTypeDescriptor(property, out var typeDescriptorAttributes))
+        {
+            customAttributes = customAttributes.Concat(typeDescriptorAttributes!.Cast<Attribute>());
+        }
+
         foreach (var attr in customAttributes)
         {
             if (attr is ValidationAttribute validationAttr)
@@ -216,6 +222,23 @@ internal class TypeDetailsCache
         }
 
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
+    }
+
+    private static bool TryGetAttributesViaTypeDescriptor(PropertyInfo property, out IEnumerable<Attribute>? typeDescriptorAttributes)
+    {
+        var attributes = TypeDescriptor.GetProperties(property.ReflectedType!)
+            .Cast<PropertyDescriptor>()
+            .FirstOrDefault(x => x.Name == property.Name)
+            ?.Attributes;
+
+        if (attributes is { Count: > 0 } tdps)
+        {
+            typeDescriptorAttributes = tdps.Cast<Attribute>();
+            return true;
+        }
+
+        typeDescriptorAttributes = null;
+        return false;
     }
 
     private static Type? GetEnumerableType(Type type)
