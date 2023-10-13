@@ -10,7 +10,7 @@ namespace MiniValidation.UnitTests
 
             foreach (PropertyDescriptor pd in TypeDescriptor.GetProperties(type))
             {
-                if (pd.Name.EndsWith(propertyName))
+                if (pd.Name == propertyName)
                 {
                     var pdWithAttribute = TypeDescriptor.CreateProperty(
                         type,
