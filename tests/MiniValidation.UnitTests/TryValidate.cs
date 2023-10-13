@@ -401,7 +401,7 @@ public class TryValidate
     {
         var thingToValidate = new TestTypeForTypeDescriptor();
 
-        TypeDescriptorExtensions.AttachAttribute<TestTypeForTypeDescriptor>(
+        typeof(TestTypeForTypeDescriptor).AttachAttribute(
             nameof(TestTypeForTypeDescriptor.PropertyToBeRequired), 
             _ => new RequiredAttribute());
 

@@ -4,10 +4,8 @@ namespace MiniValidation.UnitTests
 {
     internal static class TypeDescriptorExtensions
     {
-        public static void AttachAttribute<T>(string propertyName, Func<PropertyDescriptor, Attribute> attributeFactory)
+        public static void AttachAttribute(this Type type, string propertyName, Func<PropertyDescriptor, Attribute> attributeFactory)
         {
-            var type = typeof(T);
-
             var ctd = new PropertyOverridingTypeDescriptor(TypeDescriptor.GetProvider(type).GetTypeDescriptor(type)!);
 
             foreach (PropertyDescriptor pd in TypeDescriptor.GetProperties(type))
