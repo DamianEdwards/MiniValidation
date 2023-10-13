@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
@@ -201,7 +202,7 @@ internal class TypeDetailsCache
 
         if (TryGetAttributesViaTypeDescriptor(property, out var typeDescriptorAttributes))
         {
-            customAttributes = customAttributes.Concat(typeDescriptorAttributes!.Cast<Attribute>());
+            customAttributes = customAttributes.Concat(typeDescriptorAttributes.Cast<Attribute>());
         }
 
         foreach (var attr in customAttributes)
@@ -224,7 +225,7 @@ internal class TypeDetailsCache
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
     }
 
-    private static bool TryGetAttributesViaTypeDescriptor(PropertyInfo property, out IEnumerable<Attribute>? typeDescriptorAttributes)
+    private static bool TryGetAttributesViaTypeDescriptor(PropertyInfo property, [NotNullWhen(true)] out IEnumerable<Attribute>? typeDescriptorAttributes)
     {
         var attributes = TypeDescriptor.GetProperties(property.ReflectedType!)
             .Cast<PropertyDescriptor>()
