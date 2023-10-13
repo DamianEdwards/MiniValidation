@@ -202,7 +202,9 @@ internal class TypeDetailsCache
 
         if (TryGetAttributesViaTypeDescriptor(property, out var typeDescriptorAttributes))
         {
-            customAttributes = customAttributes.Concat(typeDescriptorAttributes.Cast<Attribute>());
+            customAttributes = customAttributes
+                .Concat(typeDescriptorAttributes.Cast<Attribute>())
+                .Distinct();
         }
 
         foreach (var attr in customAttributes)

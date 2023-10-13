@@ -408,6 +408,9 @@ public class TryValidate
         var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
 
         Assert.False(isValid);
-        Assert.Equal(1, errors.Count);
+        Assert.Equal(2, errors.Count);
+
+        Assert.Single(errors["PropertyToBeRequired"]);
+        Assert.Single(errors["AnotherProperty"]);
     }
 }
