@@ -238,3 +238,11 @@ class ClassWithUri
     [Required]
     public Uri? BaseAddress { get; set; }
 }
+
+class TestTypeForTypeDescriptor
+{
+    public string? PropertyToBeRequired { get; set; }
+
+    [MaxLength(1)]
+    public string? AnotherProperty { get; set; } = "Test";
+}

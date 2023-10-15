@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MiniValidation.UnitTests;
@@ -395,5 +394,23 @@ public class TryValidate
         Assert.False(isValid);
         Assert.Equal(1, errors.Count);
         Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task TryValidateAsync_With_Attribute_Attached_Via_TypeDescriptor()
+    {
+        var thingToValidate = new TestTypeForTypeDescriptor();
+
+        typeof(TestTypeForTypeDescriptor).AttachAttribute(
+            nameof(TestTypeForTypeDescriptor.PropertyToBeRequired), 
+            _ => new RequiredAttribute());
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
+
+        Assert.False(isValid);
+        Assert.Equal(2, errors.Count);
+
+        Assert.Single(errors["PropertyToBeRequired"]);
+        Assert.Single(errors["AnotherProperty"]);
     }
 }
