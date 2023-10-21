@@ -380,7 +380,12 @@ public static class MiniValidator
 
         foreach (var property in typeProperties)
         {
-            var propertyValue = property.GetValue(target);
+            object? propertyValue = null;
+            try
+            {
+                propertyValue = property.GetValue(target);
+            }
+            catch (Exception) { }
             var propertyValueType = propertyValue?.GetType();
             var (properties, _) = _typeDetailsCache.Get(propertyValueType);
 
