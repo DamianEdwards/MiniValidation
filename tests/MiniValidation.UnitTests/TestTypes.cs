@@ -246,3 +246,21 @@ class TestTypeForTypeDescriptor
     [MaxLength(1)]
     public string? AnotherProperty { get; set; } = "Test";
 }
+
+class ClassWithJTokenProperty
+{
+    public ClassWithJTokenProperty()
+    {
+        SomeJsonToken = Newtonsoft.Json.Linq.JToken.Parse("""
+            {
+                "prop1": 123,
+                "array1": [1, 2, 3],
+                "obj1": {
+                    "prop2": "abc"
+                }
+            }
+            """);
+    }
+
+    public Newtonsoft.Json.Linq.JToken SomeJsonToken { get; }
+}

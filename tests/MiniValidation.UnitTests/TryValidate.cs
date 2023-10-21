@@ -413,4 +413,15 @@ public class TryValidate
         Assert.Single(errors["PropertyToBeRequired"]);
         Assert.Single(errors["AnotherProperty"]);
     }
+
+    [Fact]
+    public void CanValidateClassWithJTokenProperty()
+    {
+        var thingToValidate = new ClassWithJTokenProperty();
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Equal(0, errors.Count);
+    }
 }
