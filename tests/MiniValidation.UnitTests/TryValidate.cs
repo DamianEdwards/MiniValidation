@@ -413,4 +413,15 @@ public class TryValidate
         Assert.Single(errors["PropertyToBeRequired"]);
         Assert.Single(errors["AnotherProperty"]);
     }
+
+    [Fact]
+    public void Does_Not_Throw_Exception_When_TryValidate_Called_On_Target_With_Not_Implemented_Property()
+    {
+        var thingToValidate = new ClassWithNotImplementedProperty
+        {
+            ValidProperty = "valid value"
+        };
+
+    Assert.True(MiniValidator.TryValidate(thingToValidate, out _));
+    }
 }

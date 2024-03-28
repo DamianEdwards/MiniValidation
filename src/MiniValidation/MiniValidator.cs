@@ -380,7 +380,8 @@ public static class MiniValidator
 
         foreach (var property in typeProperties)
         {
-            var propertyValue = property.GetValue(target);
+            if (!TryGetPropertyValue(target, property, out var propertyValue)) continue;
+
             var propertyValueType = propertyValue?.GetType();
             var (properties, _) = _typeDetailsCache.Get(propertyValueType);
 
@@ -492,6 +493,25 @@ public static class MiniValidator
         static string GetDisplayName(PropertyDetails property)
         {
             return property.DisplayAttribute?.GetName() ?? property.Name;
+        }
+    }
+
+    private static bool TryGetPropertyValue(
+        object target, 
+        PropertyDetails property, 
+        out object? propertyValue)
+    {
+        propertyValue = null;
+        
+        try
+        {
+            propertyValue = property.GetValue(target);
+            return true;
+        }
+        catch
+        {
+            // Exception ignored - we don't want to fail validation because of a property getter exception
+            return false;
         }
     }
 

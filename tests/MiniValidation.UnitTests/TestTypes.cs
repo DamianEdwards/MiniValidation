@@ -246,3 +246,10 @@ class TestTypeForTypeDescriptor
     [MaxLength(1)]
     public string? AnotherProperty { get; set; } = "Test";
 }
+
+class ClassWithNotImplementedProperty
+{
+    [Required]
+    public string? ValidProperty { get; set; } 
+    public TestTypeForTypeDescriptor NotImplementedProperty => throw new NotImplementedException();
+}
