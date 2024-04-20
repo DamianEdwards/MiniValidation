@@ -173,7 +173,7 @@ public class TryValidate
     [Fact]
     public void List_Invalid_When_Entry_Invalid()
     {
-        var collectionToValidate = new List<TestType> { new TestType { RequiredName = null } };
+        var collectionToValidate = new List<TestType> { new() { RequiredName = null } };
 
         var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
 
@@ -394,6 +394,56 @@ public class TryValidate
         Assert.False(isValid);
         Assert.Equal(1, errors.Count);
         Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
+    }
+
+    [Fact]
+    public void TryValidate_Enumerable_With_ServiceProvider()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<TestService>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassWithEnumerable<TestClassLevelValidatableOnlyTypeWithServiceProvider>
+        {
+            Enumerable = new List<TestClassLevelValidatableOnlyTypeWithServiceProvider>
+            {
+                new()
+            }
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, serviceProvider, out var errors);
+        Assert.True(result);
+
+        errors.Clear();
+        result = MiniValidator.TryValidate(thingToValidate, out errors);
+        Assert.False(result);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestClassWithEnumerable<object>.Enumerable)}.[0].{nameof(IServiceProvider)}", errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task TryValidateAsync_Enumerable_With_ServiceProvider()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<TestService>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassWithEnumerable<TestClassLevelValidatableOnlyTypeWithServiceProvider>
+        {
+            Enumerable = new List<TestClassLevelValidatableOnlyTypeWithServiceProvider>
+            {
+                new()
+            }
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, serviceProvider);
+        Assert.True(isValid);
+
+        errors.Clear();
+        (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
+        Assert.False(isValid);
+        Assert.Equal(1, errors.Count);
+        Assert.Equal($"{nameof(TestClassWithEnumerable<object>.Enumerable)}.[0].{nameof(IServiceProvider)}", errors.Keys.First());
     }
 
     [Fact]

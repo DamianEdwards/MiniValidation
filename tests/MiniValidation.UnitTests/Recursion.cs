@@ -65,7 +65,7 @@ public class Recursion
     [Fact]
     public void Invalid_When_Enumerable_Item_Invalid_When_Recurse_Default()
     {
-        var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
+        var thingToValidate = new List<TestType> { new() { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
 
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
@@ -76,7 +76,7 @@ public class Recursion
     [Fact]
     public void Invalid_When_Enumerable_Item_Invalid_When_Recurse_True()
     {
-        var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
+        var thingToValidate = new List<TestType> { new() { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
 
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
 
@@ -87,7 +87,7 @@ public class Recursion
     [Fact]
     public void Valid_When_Enumerable_Item_Invalid_When_Recurse_False()
     {
-        var thingToValidate = new List<TestType> { new TestType { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
+        var thingToValidate = new List<TestType> { new() { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
         
         var result = MiniValidator.TryValidate(thingToValidate, recurse: false, out _);
 
@@ -97,7 +97,7 @@ public class Recursion
     [Fact]
     public void Valid_When_Enumerable_Item_Has_Invalid_Descendant_But_Property_Decorated_With_SkipRecursion()
     {
-        var thingToValidate = new List<TestType> { new TestType { SkippedChild = new() { RequiredCategory = null } } };
+        var thingToValidate = new List<TestType> { new() { SkippedChild = new() { RequiredCategory = null } } };
 
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out _);
 
@@ -129,8 +129,8 @@ public class Recursion
     {
         var thingToValidate = new List<TestType>
         {
-            new TestType() ,
-            new TestType { RequiredName = null, TenOrMore = 5 },
+            new() ,
+            new() { RequiredName = null, TenOrMore = 5 },
         };
 
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
@@ -162,8 +162,8 @@ public class Recursion
     {
         var thingToValidate = new List<TestType>
         {
-            new TestType { RequiredName = null },
-            new TestType { RequiredName = null },
+            new() { RequiredName = null },
+            new() { RequiredName = null },
         };
 
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
