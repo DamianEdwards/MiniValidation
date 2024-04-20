@@ -28,7 +28,7 @@ namespace MiniValidation.UnitTests
     // From https://stackoverflow.com/questions/12143650/how-to-add-property-level-attribute-to-the-typedescriptor-at-runtime
     internal class PropertyOverridingTypeDescriptor : CustomTypeDescriptor
     {
-        private readonly Dictionary<string, PropertyDescriptor> overridePds = new Dictionary<string, PropertyDescriptor>();
+        private readonly Dictionary<string, PropertyDescriptor> overridePds = new();
 
         public PropertyOverridingTypeDescriptor(ICustomTypeDescriptor parent)
             : base(parent)

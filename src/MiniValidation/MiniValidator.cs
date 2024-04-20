@@ -414,7 +414,7 @@ public static class MiniValidator
             if (target is IEnumerable)
             {
                 RuntimeHelpers.EnsureSufficientExecutionStack();
-                var task = TryValidateEnumerable(target, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
+                var task = TryValidateEnumerable(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
                 ThrowIfAsyncNotAllowed(task, allowAsync);
                 isValid = await task.ConfigureAwait(false) && isValid;
             }
@@ -434,7 +434,7 @@ public static class MiniValidator
                         if (propertyDetails.IsEnumerable)
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}";
-                            var task = TryValidateEnumerable(propertyValue, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
+                            var task = TryValidateEnumerable(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
                             ThrowIfAsyncNotAllowed(task, allowAsync);
                             isValid = await task.ConfigureAwait(false) && isValid;
                         }
@@ -519,23 +519,6 @@ public static class MiniValidator
         {
             throw new InvalidOperationException($"An object in the validation graph requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.");
         }
-    }
-
-#if NET6_0_OR_GREATER
-    private static async ValueTask<bool> TryValidateEnumerable(
-#else
-    private static async Task<bool> TryValidateEnumerable(
-#endif
-        object target,
-        bool recurse,
-        bool allowAsync,
-        Dictionary<string, List<string>> workingErrors,
-        Dictionary<object, bool?> validatedObjects,
-        List<ValidationResult>? validationResults,
-        string? prefix = null,
-        int currentDepth = 0)
-    {
-        return await TryValidateEnumerable(target, null, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
     }
 
 #if NET6_0_OR_GREATER

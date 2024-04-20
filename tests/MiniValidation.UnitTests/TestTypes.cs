@@ -80,6 +80,11 @@ class TestClassLevelValidatableOnlyTypeWithServiceProvider : IValidatableObject
     }
 }
 
+class TestClassWithEnumerable<TEnumerable>
+{
+    public IEnumerable<TEnumerable>? Enumerable { get; set; }
+}
+
 class TestClassLevelAsyncValidatableOnlyType : IAsyncValidatableObject
 {
     public int TwentyOrMore { get; set; } = 20;
