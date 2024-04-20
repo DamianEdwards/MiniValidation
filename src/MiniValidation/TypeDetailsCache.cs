@@ -48,7 +48,7 @@ internal class TypeDetailsCache
             return;
         }
 
-        if (DoNotValidatePropertiesOf(type))
+        if (DoNotRecurseIntoPropertiesOf(type))
         {
             _cache[type] = (_emptyPropertyDetails, false);
             return;
@@ -146,25 +146,13 @@ internal class TypeDetailsCache
         _cache[type] = (propertiesToValidate?.ToArray() ?? _emptyPropertyDetails, requiresAsync);
     }
 
-    private static bool DoNotValidatePropertiesOf(Type type) =>
+    private static bool DoNotRecurseIntoPropertiesOf(Type type) =>
         type == typeof(object)
         || type.IsPrimitive
         || type.IsArray
         || type.IsPointer
         || type.IsEnum
         || type == typeof(string)
-        || type == typeof(char)
-        || type == typeof(bool)
-        || type == typeof(byte)
-        || type == typeof(sbyte)
-        || type == typeof(short)
-        || type == typeof(ushort)
-        || type == typeof(int)
-        || type == typeof(uint)
-        || type == typeof(long)
-        || type == typeof(ulong)
-        || type == typeof(float)
-        || type == typeof(double)
         || type == typeof(decimal)
         || type == typeof(DateTime)
         || type == typeof(DateTimeOffset)
