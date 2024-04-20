@@ -23,7 +23,8 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.RequiredName), entry.Key));
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestType.RequiredName), entry.Key);
     }
 
     [Fact]
@@ -34,7 +35,8 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.RequiredName), entry.Key));
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestType.RequiredName), entry.Key);
     }
 
     [Fact]
@@ -45,7 +47,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -56,7 +58,8 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Collection(errors, entry => Assert.Equal(nameof(TestType.TenOrMore), entry.Key));
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestType.TenOrMore), entry.Key);
     }
 
     [Fact]
@@ -67,7 +70,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
 #if NET6_0_OR_GREATER
@@ -79,7 +82,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -90,7 +93,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
     }
 #endif
 
@@ -102,7 +105,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -113,7 +116,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
     }
 
     [Fact]
@@ -124,7 +127,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
     }
 
     [Fact]
@@ -146,11 +149,9 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Collection(errors,
-            entry => Assert.Collection(entry.Value,
-                error => Assert.Contains("Required name", error)
-            )
-        );
+        var entry = Assert.Single(errors);
+        var error = Assert.Single(entry.Value);
+        Assert.Contains("Required name", error);
     }
 
 #if NET6_0_OR_GREATER
@@ -162,11 +163,9 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Collection(errors,
-            entry => Assert.Collection(entry.Value,
-                error => Assert.Contains("Required name", error)
-            )
-        );
+        var entry = Assert.Single(errors);
+        var error = Assert.Single(entry.Value);
+        Assert.Contains("Required name", error);
     }
 #endif
 
@@ -178,11 +177,11 @@ public class TryValidate
         var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
     }
 
-    public static IEnumerable<object?[]> PrimitiveValues
-        => new object?[][] {
+    public static TheoryData<object> PrimitiveValues
+        => new() {
         new object[] { "A string" },
         new object[] { 'c' },
         new object[] { 100 },
@@ -201,13 +200,15 @@ public class TryValidate
     };
 
     [Theory]
+#pragma warning disable xUnit1045 // Avoid using TheoryData type arguments that might not be serializable
     [MemberData(nameof(PrimitiveValues))]
+#pragma warning restore xUnit1045 // Avoid using TheoryData type arguments that might not be serializable
     public void Valid_When_Target_Is_Not_Complex(object thingToValidate)
     {
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
     }
 
     [Fact]
@@ -243,7 +244,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.First());
     }
 
@@ -258,7 +259,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
     }
 
@@ -274,7 +275,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
     }
 
@@ -289,7 +290,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal("", errors.Keys.First());
     }
 
@@ -304,7 +305,7 @@ public class TryValidate
         var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, true);
 
         Assert.False(isValid);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal("", errors.Keys.First());
     }
 
@@ -330,7 +331,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -341,7 +342,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.True(result);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -352,7 +353,7 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(ClassWithUri.BaseAddress), errors.Keys.First());
     }
 
@@ -371,7 +372,7 @@ public class TryValidate
         errors.Clear();
         result = MiniValidator.TryValidate(thingToValidate, out errors);
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
     }
 
@@ -387,12 +388,12 @@ public class TryValidate
         var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, serviceProvider);
 
         Assert.True(isValid);
-        Assert.Equal(0, errors.Count);
+        Assert.Empty(errors);
 
         errors.Clear();
         (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
         Assert.False(isValid);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal(nameof(IServiceProvider), errors.Keys.First());
     }
 
@@ -417,7 +418,7 @@ public class TryValidate
         errors.Clear();
         result = MiniValidator.TryValidate(thingToValidate, out errors);
         Assert.False(result);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal($"{nameof(TestClassWithEnumerable<object>.Enumerable)}.[0].{nameof(IServiceProvider)}", errors.Keys.First());
     }
 
@@ -442,7 +443,7 @@ public class TryValidate
         errors.Clear();
         (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
         Assert.False(isValid);
-        Assert.Equal(1, errors.Count);
+        Assert.Single(errors);
         Assert.Equal($"{nameof(TestClassWithEnumerable<object>.Enumerable)}.[0].{nameof(IServiceProvider)}", errors.Keys.First());
     }
 
