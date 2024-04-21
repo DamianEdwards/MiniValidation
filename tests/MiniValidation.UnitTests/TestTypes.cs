@@ -232,7 +232,9 @@ abstract record BaseRecordType(string Type);
 record TestRecordType([Required, Display(Name = "Required name")] string RequiredName = "Default", [Range(10, 100)] int TenOrMore = 10)
     : BaseRecordType(nameof(TestRecordType))
 {
+#pragma warning disable IDE0060 // Remove unused parameter
     public TestRecordType(string anotherParam, bool doTheThing) : this("Another name", 23)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
     }
 };

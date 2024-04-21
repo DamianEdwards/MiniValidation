@@ -183,21 +183,33 @@ public static class MiniValidator
 
         bool isValid;
 
-        if (!validateTask.IsCompleted)
+        if (validateTask.IsCompleted)
+        {
+            isValid = validateTask.GetAwaiter().GetResult();
+        }
+        else
         {
             // This is a backstop check as TryValidateImpl and the methods it calls should all be doing this check as the object
             // graph is walked during validation.
-            ThrowIfAsyncNotAllowed(validateTask, allowAsync);
+            try
+            {
+                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+            }
+            catch (Exception)
+            {
+#if NET6_0_OR_GREATER
+                _ = validateTask.AsTask().GetAwaiter().GetResult();
+#else
+                _ = validateTask.GetAwaiter().GetResult();
+#endif
+                throw;
+            }
 
 #if NET6_0_OR_GREATER
             isValid = validateTask.AsTask().GetAwaiter().GetResult();
 #else
             isValid = validateTask.GetAwaiter().GetResult();
 #endif
-        }
-        else
-        {
-            isValid = validateTask.GetAwaiter().GetResult();
         }
 
         errors = MapToFinalErrorsResult(workingErrors);
@@ -414,9 +426,20 @@ public static class MiniValidator
             if (target is IEnumerable)
             {
                 RuntimeHelpers.EnsureSufficientExecutionStack();
-                var task = TryValidateEnumerable(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
-                ThrowIfAsyncNotAllowed(task, allowAsync);
-                isValid = await task.ConfigureAwait(false) && isValid;
+
+                var validateTask = TryValidateEnumerable(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
+
+                try
+                {
+                    ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+                }
+                catch (Exception)
+                {
+                    _ = await validateTask.ConfigureAwait(false);
+                    throw;
+                }
+
+                isValid = await validateTask.ConfigureAwait(false) && isValid;
             }
 
             // Validate complex properties
@@ -434,16 +457,36 @@ public static class MiniValidator
                         if (propertyDetails.IsEnumerable)
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}";
-                            var task = TryValidateEnumerable(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
-                            ThrowIfAsyncNotAllowed(task, allowAsync);
-                            isValid = await task.ConfigureAwait(false) && isValid;
+
+                            var validateTask = TryValidateEnumerable(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
+                            try
+                            {
+                                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+                            }
+                            catch (Exception)
+                            {
+                                _ = await validateTask.ConfigureAwait(false);
+                                throw;
+                            }
+
+                            isValid = await validateTask.ConfigureAwait(false) && isValid;
                         }
                         else
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
-                            var task = TryValidateImpl(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
-                            ThrowIfAsyncNotAllowed(task, allowAsync);
-                            isValid = await task.ConfigureAwait(false) && isValid;
+
+                            var validateTask = TryValidateImpl(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
+                            try
+                            {
+                                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+                            }
+                            catch (Exception)
+                            {
+                                await validateTask.ConfigureAwait(false);
+                                throw;
+                            }
+
+                            isValid = await validateTask.ConfigureAwait(false) && isValid;
                         }
                     }
                 }
@@ -474,9 +517,18 @@ public static class MiniValidator
             validationContext.MemberName = null;
             validationContext.DisplayName = validationContext.ObjectType.Name;
 
-            var task = validatable.ValidateAsync(validationContext);
-            ThrowIfAsyncNotAllowed(task, allowAsync);
-            var validatableResults = await task.ConfigureAwait(false);
+            var validateTask = validatable.ValidateAsync(validationContext);
+            try
+            {
+                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+            }
+            catch (Exception)
+            {
+                _ = await validateTask.ConfigureAwait(false);
+                throw;
+            }
+
+            var validatableResults = await validateTask.ConfigureAwait(false);
             if (validatableResults is not null)
             {
                 ProcessValidationResults(validatableResults, workingErrors, prefix);
@@ -495,27 +547,9 @@ public static class MiniValidator
         }
     }
 
-#if NET6_0_OR_GREATER
-    private static void ThrowIfAsyncNotAllowed(ValueTask<bool> validateTask, bool allowAsync)
+    private static void ThrowIfAsyncNotAllowed(bool taskCompleted, bool allowAsync)
     {
-        if (!validateTask.IsCompleted)
-        {
-            ThrowIfAsyncNotAllowed(allowAsync);
-        }
-    }
-#endif
-
-    private static void ThrowIfAsyncNotAllowed(Task validateTask, bool allowAsync)
-    {
-        if (!validateTask.IsCompleted)
-        {
-            ThrowIfAsyncNotAllowed(allowAsync);
-        }
-    }
-
-    private static void ThrowIfAsyncNotAllowed(bool allowAsync)
-    {
-        if (!allowAsync)
+        if (!allowAsync & !taskCompleted)
         {
             throw new InvalidOperationException($"An object in the validation graph requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.");
         }
@@ -550,9 +584,18 @@ public static class MiniValidator
 
                 var itemPrefix = $"{prefix}[{index}].";
 
-                var task = TryValidateImpl(item, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
-                ThrowIfAsyncNotAllowed(task, allowAsync);
-                isValid = await task.ConfigureAwait(false);
+                var validateTask = TryValidateImpl(item, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
+                try
+                {
+                    ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+                }
+                catch (Exception)
+                {
+                    _ = await validateTask.ConfigureAwait(false);
+                    throw;
+                }
+
+                isValid = await validateTask.ConfigureAwait(false);
 
                 if (!isValid)
                 {
