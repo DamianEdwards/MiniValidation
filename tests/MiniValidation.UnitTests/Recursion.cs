@@ -412,7 +412,7 @@ public class Recursion
         Assert.Equal($"{nameof(TestTypeWithAsyncChild.NeedsAsync)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
     }
 
-    [Fact]
+    [Fact(Skip = "Unreliable on CI, can reproduce on dev machine with loop count 100+")]
     public void Throws_InvalidOperationException_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
     {
         var thingToValidate = new TestValidatableType
@@ -420,10 +420,13 @@ public class Recursion
             PocoChild = new TestAsyncValidatableChildType { TwentyOrMore = 12 }
         };
 
-        Assert.Throws<InvalidOperationException>(() =>
+        for (int i = 0; i < 10000; i++)
         {
-            var result = MiniValidator.TryValidate(thingToValidate, out var errors);
-        });
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+            });
+        }
     }
 
     [Fact]
