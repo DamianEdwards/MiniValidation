@@ -1,4 +1,6 @@
-﻿namespace MiniValidation.UnitTests;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace MiniValidation.UnitTests;
 
 class TestType
 {
@@ -182,7 +184,11 @@ class TestAsyncValidatableChildType : TestChildType, IAsyncValidatableObject
 
     public async Task<IEnumerable<ValidationResult>> ValidateAsync(ValidationContext validationContext)
     {
-        await Task.Yield();
+        var taskToAwait = validationContext.GetService<Task>();
+        if (taskToAwait is not null)
+        {
+            await taskToAwait;
+        }
 
         List<ValidationResult>? result = null;
         if (TwentyOrMore < 20)

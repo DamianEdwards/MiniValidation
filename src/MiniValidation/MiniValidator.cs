@@ -198,6 +198,7 @@ public static class MiniValidator
             catch (Exception)
             {
 #if NET6_0_OR_GREATER
+                // Always observe the ValueTask
                 _ = validateTask.AsTask().GetAwaiter().GetResult();
 #else
                 _ = validateTask.GetAwaiter().GetResult();
@@ -435,6 +436,7 @@ public static class MiniValidator
                 }
                 catch (Exception)
                 {
+                    // Always observe the ValueTask
                     _ = await validateTask.ConfigureAwait(false);
                     throw;
                 }
@@ -465,6 +467,7 @@ public static class MiniValidator
                             }
                             catch (Exception)
                             {
+                                // Always observe the ValueTask
                                 _ = await validateTask.ConfigureAwait(false);
                                 throw;
                             }
@@ -482,7 +485,8 @@ public static class MiniValidator
                             }
                             catch (Exception)
                             {
-                                await validateTask.ConfigureAwait(false);
+                                // Always observe the ValueTask
+                                _ = await validateTask.ConfigureAwait(false);
                                 throw;
                             }
 
@@ -518,15 +522,7 @@ public static class MiniValidator
             validationContext.DisplayName = validationContext.ObjectType.Name;
 
             var validateTask = validatable.ValidateAsync(validationContext);
-            try
-            {
-                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
-            }
-            catch (Exception)
-            {
-                _ = await validateTask.ConfigureAwait(false);
-                throw;
-            }
+            ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
 
             var validatableResults = await validateTask.ConfigureAwait(false);
             if (validatableResults is not null)
@@ -591,6 +587,7 @@ public static class MiniValidator
                 }
                 catch (Exception)
                 {
+                    // Always observe the ValueTask
                     _ = await validateTask.ConfigureAwait(false);
                     throw;
                 }

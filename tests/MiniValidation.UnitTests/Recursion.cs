@@ -1,4 +1,6 @@
-﻿namespace MiniValidation.UnitTests;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace MiniValidation.UnitTests;
 
 public class Recursion
 {
@@ -412,7 +414,7 @@ public class Recursion
         Assert.Equal($"{nameof(TestTypeWithAsyncChild.NeedsAsync)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
     }
 
-    [Fact(Skip = "Unreliable on CI, can reproduce on dev machine with loop count 100+. See https://github.com/xunit/xunit/issues/2917")]
+    [Fact]
     public void Throws_InvalidOperationException_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
     {
         var thingToValidate = new TestValidatableType
@@ -420,13 +422,20 @@ public class Recursion
             PocoChild = new TestAsyncValidatableChildType { TwentyOrMore = 12 }
         };
 
-        for (int i = 0; i < 10000; i++)
+        Assert.Throws<InvalidOperationException>(() =>
         {
-            Assert.Throws<InvalidOperationException>(() =>
+            var tcs = new TaskCompletionSource<object?>();
+            var serviceProvider = new ServiceCollection().AddSingleton<Task>(tcs.Task).BuildServiceProvider();
+
+            try
             {
-                var result = MiniValidator.TryValidate(thingToValidate, out var errors);
-            });
-        }
+                var result = MiniValidator.TryValidate(thingToValidate, serviceProvider, out var errors);
+            }
+            finally
+            {
+                tcs.SetResult(null);
+            }
+        });
     }
 
     [Fact]
