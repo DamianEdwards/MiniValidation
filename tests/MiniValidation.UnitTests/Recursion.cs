@@ -412,7 +412,7 @@ public class Recursion
         Assert.Equal($"{nameof(TestTypeWithAsyncChild.NeedsAsync)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
     }
 
-    [Fact(Skip = "Unreliable on CI, can reproduce on dev machine with loop count 100+")]
+    [Fact(Skip = "Unreliable on CI, can reproduce on dev machine with loop count 100+. See https://github.com/xunit/xunit/issues/2917")]
     public void Throws_InvalidOperationException_When_Polymorphic_AsyncValidatableOnlyChild_Is_Invalid_Without_Allowing_SyncOverAsync()
     {
         var thingToValidate = new TestValidatableType
