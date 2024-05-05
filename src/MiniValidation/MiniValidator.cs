@@ -6,6 +6,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace MiniValidation;
 
@@ -13,16 +15,10 @@ namespace MiniValidation;
 /// Contains methods and properties for performing validation operations with <see cref="Validator"/> on objects whos properties
 /// are decorated with <see cref="ValidationAttribute"/>s.
 /// </summary>
-public static class MiniValidator
+public static partial class MiniValidator
 {
     private static readonly TypeDetailsCache _typeDetailsCache = new();
     private static readonly IDictionary<string, string[]> _emptyErrors = new ReadOnlyDictionary<string, string[]>(new Dictionary<string, string[]>());
-
-    /// <summary>
-    /// Gets or sets the maximum depth allowed when validating an object with recursion enabled.
-    /// Defaults to 32.
-    /// </summary>
-    public static int MaxDepth { get; set; } = 32;
 
     /// <summary>
     /// Determines if the specified <see cref="Type"/> has anything to validate.
@@ -57,6 +53,24 @@ public static class MiniValidator
     public static bool TryValidate<TTarget>(TTarget target, out IDictionary<string, string[]> errors)
     {
         return TryValidateImpl(target, null, recurse: true, allowAsync: false, out errors);
+    }
+
+    /// <summary>
+    /// Determines whether the specific object is valid. This method recursively validates descendant objects.
+    /// </summary>
+    /// <param name="target">The object to validate.</param>
+    /// <param name="options">The options to use for the validation operation.</param>
+    /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+    /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    public static bool TryValidate<TTarget>(TTarget target, ValidateOptions options, out IDictionary<string, string[]> errors)
+    {
+        if (options is null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+
+        return TryValidateImpl(target, serviceProvider: null, recurse: null, allowAsync: false, out errors, validateOptions: options);
     }
 
     /// <summary>
@@ -153,15 +167,19 @@ public static class MiniValidator
     /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
     /// <param name="allowAsync"><c>true</c> to allow asynchronous validation if an object in the graph requires it.</param>
     /// <param name="errors">A dictionary that contains details of each failed validation.</param>
+    /// <param name="validateOptions">The options to use for the validation operation.</param>
     /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
     /// <exception cref="ArgumentException">Throw when <paramref name="target"/> requires async validation and <paramref name="allowAsync"/> is <c>false</c>.</exception>
-    private static bool TryValidateImpl<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse, bool allowAsync, out IDictionary<string, string[]> errors)
+    private static bool TryValidateImpl<TTarget>(TTarget target, IServiceProvider? serviceProvider, ValidateOptions? validateOptions, out IDictionary<string, string[]> errors)
     {
         if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
         }
+
+        serviceProvider ??= validateOptions?.Services;
+        validateOptions ??= serviceProvider?.GetService<IOptions<ValidateOptions>>()?.Value ?? ValidateOptions.Default;
 
         if (!RequiresValidation(target.GetType(), recurse))
         {
@@ -171,7 +189,7 @@ public static class MiniValidator
             return true;
         }
 
-        if (_typeDetailsCache.Get(target.GetType()).RequiresAsync && !allowAsync)
+        if (_typeDetailsCache.Get(target.GetType()).RequiresAsync && !validateOptions.AllowAsyncValidation)
         {
             throw new ArgumentException($"The target type {target.GetType().Name} requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.", nameof(target));
         }
@@ -179,7 +197,7 @@ public static class MiniValidator
         var validatedObjects = new Dictionary<object, bool?>();
         var workingErrors = new Dictionary<string, List<string>>();
 
-        var validateTask = TryValidateImpl(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects);
+        var validateTask = TryValidateImpl(target, serviceProvider, validateOptions, workingErrors, validatedObjects);
 
         bool isValid;
 
@@ -193,7 +211,7 @@ public static class MiniValidator
             // graph is walked during validation.
             try
             {
-                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, validateOptions.AllowAsyncValidation);
             }
             catch (Exception)
             {
@@ -282,7 +300,17 @@ public static class MiniValidator
     public static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
 #endif
     {
-        return TryValidateImplAsync(target, serviceProvider, recurse);
+        var options = serviceProvider?.GetService<IOptions<ValidateOptions>>()?.Value ?? new ValidateOptions(ValidateOptions.Default) { DisableRecursion = !recurse };
+
+        if (options.DisableRecursion != !recurse)
+        {
+            options = new(options)
+            {
+                DisableRecursion = !recurse
+            };
+        }
+
+        return TryValidateImplAsync(target, serviceProvider, options);
     }
 
     /// <summary>
@@ -291,18 +319,21 @@ public static class MiniValidator
     /// <param name="target">The object to validate.</param>
     /// <param name="serviceProvider">The service provider to use when creating ValidationContext.</param>
     /// <param name="recurse"><c>true</c> to recursively validate descendant objects; if <c>false</c> only simple values directly on <paramref name="target"/> are validated.</param>
+    /// <param name="validateOptions">The options to use for the validation operation.</param>
     /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c> and the validation errors.</returns>
     /// <exception cref="ArgumentNullException"></exception>
 #if NET6_0_OR_GREATER
-    private static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
+    private static ValueTask<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, ValidateOptions validateOptions)
 #else
-    private static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, bool recurse)
+    private static Task<(bool IsValid, IDictionary<string, string[]> Errors)> TryValidateImplAsync<TTarget>(TTarget target, IServiceProvider? serviceProvider, ValidateOptions validateOptions)
 #endif
     {
         if (target is null)
         {
             throw new ArgumentNullException(nameof(target));
         }
+
+        var recurse = !validateOptions.DisableRecursion;
 
         IDictionary<string, string[]>? errors;
 
@@ -320,7 +351,7 @@ public static class MiniValidator
 
         var validatedObjects = new Dictionary<object, bool?>();
         var workingErrors = new Dictionary<string, List<string>>();
-        var validationTask = TryValidateImpl(target, serviceProvider, recurse, allowAsync: true, workingErrors, validatedObjects);
+        var validationTask = TryValidateImpl(target, serviceProvider, validateOptions, workingErrors, validatedObjects);
 
         if (validationTask.IsCompleted)
         {
@@ -358,8 +389,7 @@ public static class MiniValidator
 #endif
         object target,
         IServiceProvider? serviceProvider,
-        bool recurse,
-        bool allowAsync,
+        ValidateOptions validateOptions,
         Dictionary<string, List<string>> workingErrors,
         Dictionary<object, bool?> validatedObjects,
         List<ValidationResult>? validationResults = null,
@@ -381,6 +411,10 @@ public static class MiniValidator
             return !result.HasValue || result == true;
         }
 
+        var services = serviceProvider ?? validateOptions.Services;
+        var recurse = !validateOptions.DisableRecursion;
+        var allowAsync = validateOptions.AllowAsyncValidation;
+
         // Add current target to tracking dictionary in null (validating) state
         validatedObjects.Add(target, null);
 
@@ -389,7 +423,7 @@ public static class MiniValidator
 
         var isValid = true;
         var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
-        var validationContext = new ValidationContext(target, serviceProvider: serviceProvider, items: null);
+        var validationContext = new ValidationContext(target, serviceProvider: services, items: null);
 
         foreach (var property in typeProperties)
         {
@@ -428,7 +462,7 @@ public static class MiniValidator
             {
                 RuntimeHelpers.EnsureSufficientExecutionStack();
 
-                var validateTask = TryValidateEnumerable(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
+                var validateTask = TryValidateEnumerable(target, services, validateOptions, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
 
                 try
                 {
@@ -460,7 +494,7 @@ public static class MiniValidator
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}";
 
-                            var validateTask = TryValidateEnumerable(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
+                            var validateTask = TryValidateEnumerable(propertyValue, services, validateOptions, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
                             try
                             {
                                 ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
@@ -478,7 +512,7 @@ public static class MiniValidator
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
 
-                            var validateTask = TryValidateImpl(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
+                            var validateTask = TryValidateImpl(propertyValue, services, validateOptions, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
                             try
                             {
                                 ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
@@ -558,14 +592,15 @@ public static class MiniValidator
 #endif
         object target,
         IServiceProvider? serviceProvider,
-        bool recurse,
-        bool allowAsync,
+        ValidateOptions validateOptions,
         Dictionary<string, List<string>> workingErrors,
         Dictionary<object, bool?> validatedObjects,
         List<ValidationResult>? validationResults,
         string? prefix = null,
         int currentDepth = 0)
     {
+        var allowAsync = validateOptions.AllowAsyncValidation;
+
         var isValid = true;
         if (target is IEnumerable items)
         {
@@ -580,7 +615,7 @@ public static class MiniValidator
 
                 var itemPrefix = $"{prefix}[{index}].";
 
-                var validateTask = TryValidateImpl(item, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
+                var validateTask = TryValidateImpl(item, serviceProvider, validateOptions, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
                 try
                 {
                     ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);

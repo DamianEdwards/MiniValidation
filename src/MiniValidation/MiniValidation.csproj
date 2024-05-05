@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>A minimalist validation library built atop the existing validation features in .NET's `System.ComponentModel.DataAnnotations` namespace.</Description>
@@ -10,10 +10,12 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="System.ComponentModel.Annotations" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
     <PackageReference Include="PolySharp">
       <PrivateAssets>all</PrivateAssets>

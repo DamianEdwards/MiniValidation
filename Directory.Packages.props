@@ -5,6 +5,7 @@
   <ItemGroup>
     <PackageVersion Include="PolySharp" Version="1.14.1" />
     <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageVersion Include="System.Text.Json" Version="8.0.3" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
@@ -13,5 +14,6 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
   </ItemGroup>
 </Project>
