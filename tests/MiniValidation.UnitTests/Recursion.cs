@@ -467,4 +467,30 @@ public class Recursion
         Assert.Single(errors);
         Assert.Equal($"{nameof(TestValidatableType.PocoChild)}.{nameof(TestAsyncValidatableChildType.TwentyOrMore)}", errors.Keys.First());
     }
+    
+    [Fact]
+    public async Task Throws_When_Validates_With_Recurse_And_Object_Has_Not_Implemented_Property()
+    {
+        var thingToValidate = new TestTypeWithNotImplementedProperty
+        {
+            PropertyToBeRequired = "test1"
+        };
+
+
+        await Assert.ThrowsAsync<Exception>(
+            async () => await MiniValidator.TryValidateAsync(thingToValidate, recurse: true));
+    }
+    
+    [Fact]
+    public async Task DoesntThrow_When_Validates_Without_Recurse_And_Object_Has_Not_Implemented_Property()
+    {
+        var thingToValidate = new TestTypeWithNotImplementedProperty
+        {
+            PropertyToBeRequired = "test1"
+        };
+
+        var (isValid, _) = await MiniValidator.TryValidateAsync(thingToValidate, recurse: false);
+
+        Assert.True(isValid);
+    }
 }

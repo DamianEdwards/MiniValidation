@@ -391,7 +391,7 @@ public static class MiniValidator
         var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
         var validationContext = new ValidationContext(target, serviceProvider: serviceProvider, items: null);
 
-        foreach (var property in typeProperties)
+        foreach (var property in typeProperties.Where(p => p.HasValidationAttributes || recurse))
         {
             var propertyValue = property.GetValue(target);
             var propertyValueType = propertyValue?.GetType();
