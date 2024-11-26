@@ -598,10 +598,6 @@ public static class MiniValidator
                     isValid = false;
                 }
 
-                // if (!isValid)
-                // {
-                //     break;
-                // }
                 index++;
             }
         }
