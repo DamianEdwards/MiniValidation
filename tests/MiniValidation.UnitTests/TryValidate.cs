@@ -170,6 +170,16 @@ public class TryValidate
 #endif
 
     [Fact]
+    public void List_Invalid_When_Entry_Valid()
+    {
+        var collectionToValidate = new List<TestType> { new() { RequiredName = "test" } };
+
+        var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
+
+        Assert.True(result);
+    }
+
+    [Fact]
     public void List_Invalid_When_Entry_Invalid()
     {
         var collectionToValidate = new List<TestType> { new() { RequiredName = null } };
@@ -178,6 +188,59 @@ public class TryValidate
 
         Assert.False(result);
         Assert.Single(errors);
+    }
+
+    [Fact]
+    public void List_Invalid_When_Multiple_Entries_Invalid()
+    {
+        var collectionToValidate = new List<TestType> { new() { RequiredName = null }, new() { RequiredName = "test", TenOrMore = 5 } };
+
+        var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+    }
+
+    [Fact]
+    public void List_Invalid_When_Dictionary_Entry_Valid()
+    {
+        var collectionToValidate = new Dictionary<string, TestType>
+        {
+            ["key1"] = new() { RequiredName = "test" }
+        };
+
+        var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void List_Invalid_When_Dictionary_Entry_Invalid()
+    {
+        var collectionToValidate = new Dictionary<string, TestType>
+        {
+            ["key1"] = new() { RequiredName = null }
+        };
+
+        var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Single(errors);
+    }
+
+    [Fact]
+    public void List_Invalid_When_Multiple_Dictionary_Entries_Invalid()
+    {
+        var collectionToValidate = new Dictionary<string, TestType>
+        {
+            ["key1"] = new() { RequiredName = null },
+            ["key2"] = new() { RequiredName = "test", TenOrMore = 5 },
+        };
+
+        var result = MiniValidator.TryValidate(collectionToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
     }
 
     public static TheoryData<object> PrimitiveValues
@@ -453,7 +516,7 @@ public class TryValidate
         var thingToValidate = new TestTypeForTypeDescriptor();
 
         typeof(TestTypeForTypeDescriptor).AttachAttribute(
-            nameof(TestTypeForTypeDescriptor.PropertyToBeRequired), 
+            nameof(TestTypeForTypeDescriptor.PropertyToBeRequired),
             _ => new RequiredAttribute());
 
         var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);

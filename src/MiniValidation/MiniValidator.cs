@@ -592,12 +592,16 @@ public static class MiniValidator
                     throw;
                 }
 
-                isValid = await validateTask.ConfigureAwait(false);
-
-                if (!isValid)
+                var thisOneIsValid = await validateTask.ConfigureAwait(false);
+                if (!thisOneIsValid)
                 {
-                    break;
+                    isValid = false;
                 }
+
+                // if (!isValid)
+                // {
+                //     break;
+                // }
                 index++;
             }
         }
