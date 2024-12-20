@@ -477,8 +477,7 @@ public class Recursion
         };
 
 
-        await Assert.ThrowsAsync<Exception>(
-            async () => await MiniValidator.TryValidateAsync(thingToValidate, recurse: true));
+        await Assert.ThrowsAsync<Exception>(async () => await MiniValidator.TryValidateAsync(thingToValidate, recurse: true));
     }
     
     [Fact]
