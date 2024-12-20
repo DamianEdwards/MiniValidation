@@ -450,11 +450,11 @@ public class TryValidate
     [Fact]
     public async Task TryValidateAsync_With_Attribute_Attached_Via_TypeDescriptor()
     {
-        var thingToValidate = new TestTypeForTypeDescriptor();
-
         typeof(TestTypeForTypeDescriptor).AttachAttribute(
-            nameof(TestTypeForTypeDescriptor.PropertyToBeRequired), 
-            _ => new RequiredAttribute());
+                nameof(TestTypeForTypeDescriptor.PropertyToBeRequired),
+                _ => new RequiredAttribute());
+
+        var thingToValidate = new TestTypeForTypeDescriptor();
 
         var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate);
 
