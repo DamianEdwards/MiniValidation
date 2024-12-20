@@ -393,6 +393,12 @@ public static class MiniValidator
 
         foreach (var property in typeProperties)
         {
+            // Skip properties that don't have validation attributes if we're not recursing
+            if (!(property.HasValidationAttributes || recurse))
+            {
+                continue;
+            }
+
             var propertyValue = property.GetValue(target);
             var propertyValueType = propertyValue?.GetType();
             var (properties, _) = _typeDetailsCache.Get(propertyValueType);
