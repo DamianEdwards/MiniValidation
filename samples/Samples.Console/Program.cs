@@ -5,7 +5,7 @@ var title = args.Length > 0 ? args[0] : "";
 
 var widgets = new List<Widget>
 {
-    new Widget { Name = title },
+    new() { Name = title },
     new WidgetWithCustomValidation { Name = title }
 };
 
