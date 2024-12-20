@@ -32,9 +32,10 @@ public static class MiniValidator
     /// </remarks>
     /// <param name="targetType">The <see cref="Type"/>.</param>
     /// <param name="recurse"><c>true</c> to recursively check descendant types; if <c>false</c> only simple values directly on the target type are checked.</param>
+    /// <param name="serviceProvider">The service provider to use when checking for validators.</param>
     /// <returns><c>true</c> if <paramref name="targetType"/> has anything to validate, <c>false</c> if not.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="targetType"/> is <c>null</c>.</exception>
-    public static bool RequiresValidation(Type targetType, bool recurse = true)
+    public static bool RequiresValidation(Type targetType, bool recurse = true, IServiceProvider? serviceProvider = null)
     {
         if (targetType is null)
         {
@@ -44,7 +45,8 @@ public static class MiniValidator
         return typeof(IValidatableObject).IsAssignableFrom(targetType)
             || typeof(IAsyncValidatableObject).IsAssignableFrom(targetType)
             || (recurse && typeof(IEnumerable).IsAssignableFrom(targetType))
-            || _typeDetailsCache.Get(targetType).Properties.Any(p => p.HasValidationAttributes || recurse);
+            || _typeDetailsCache.Get(targetType).Properties.Any(p => p.HasValidationAttributes || recurse)
+            || serviceProvider?.GetService(typeof(IValidatable<>).MakeGenericType(targetType)) != null;
     }
 
     /// <summary>
@@ -163,7 +165,7 @@ public static class MiniValidator
             throw new ArgumentNullException(nameof(target));
         }
 
-        if (!RequiresValidation(target.GetType(), recurse))
+        if (!RequiresValidation(target.GetType(), recurse, serviceProvider))
         {
             errors = _emptyErrors;
 
@@ -306,7 +308,7 @@ public static class MiniValidator
 
         IDictionary<string, string[]>? errors;
 
-        if (!RequiresValidation(target.GetType(), recurse))
+        if (!RequiresValidation(target.GetType(), recurse, serviceProvider))
         {
             errors = _emptyErrors;
 
@@ -421,6 +423,7 @@ public static class MiniValidator
                 (property.Recurse
                  || typeof(IValidatableObject).IsAssignableFrom(propertyValueType)
                  || typeof(IAsyncValidatableObject).IsAssignableFrom(propertyValueType)
+                 || serviceProvider?.GetService(typeof(IValidatable<>).MakeGenericType(propertyValueType!)) != null
                  || properties.Any(p => p.Recurse)))
             {
                 propertiesToRecurse!.Add(property, propertyValue);
@@ -535,6 +538,47 @@ public static class MiniValidator
             {
                 ProcessValidationResults(validatableResults, workingErrors, prefix);
                 isValid = workingErrors.Count == 0 && isValid;
+            }
+        }
+
+        if (isValid)
+        {
+            var validators = (IEnumerable?)serviceProvider?.GetService(typeof(IEnumerable<>).MakeGenericType(typeof(IValidatable<>).MakeGenericType(targetType)));
+            if (validators != null)
+            {
+                foreach (var validator in validators)
+                {
+                    if (!isValid)
+                        continue;
+
+                    var validatorMethod = validator.GetType().GetMethod(nameof(IValidatable<object>.ValidateAsync));
+                    if (validatorMethod is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"The type {validators.GetType().Name} does not implement the required method 'Task<IEnumerable<ValidationResult>> ValidateAsync(object, ValidationContext)'.");
+                    }
+
+                    var validateTask = (Task<IEnumerable<ValidationResult>>?)validatorMethod.Invoke(validator,
+                            new[] { target, validationContext });
+                    if (validateTask is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"The type {validators.GetType().Name} does not implement the required method 'Task<IEnumerable<ValidationResult>> ValidateAsync(object, ValidationContext)'.");
+                    }
+
+                    // Reset validation context
+                    validationContext.MemberName = null;
+                    validationContext.DisplayName = validationContext.ObjectType.Name;
+
+                    ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+
+                    var validatableResults = await validateTask.ConfigureAwait(false);
+                    if (validatableResults is not null)
+                    {
+                        ProcessValidationResults(validatableResults, workingErrors, prefix);
+                        isValid = workingErrors.Count == 0 && isValid;
+                    }
+                }
             }
         }
 

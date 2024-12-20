@@ -398,6 +398,63 @@ public class TryValidate
     }
 
     [Fact]
+    public void TryValidate_With_Validator()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<IValidatable<TestClassLevel>, TestClassLevelValidator>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassLevel
+        {
+            TwentyOrMore = 12
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            var isValid = MiniValidator.TryValidate(thingToValidate, serviceProvider, out var errors);
+        });
+    }
+
+    [Fact]
+    public async Task TryValidateAsync_With_Validator()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<IValidatable<TestClassLevel>, TestClassLevelValidator>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassLevel
+        {
+            TwentyOrMore = 12
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, serviceProvider);
+
+        Assert.False(isValid);
+        Assert.Single(errors);
+        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.First());
+    }
+
+    [Fact]
+    public async Task TryValidateAsync_With_Multiple_Validators()
+    {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<IValidatable<TestClassLevel>, TestClassLevelValidator>();
+        serviceCollection.AddSingleton<IValidatable<TestClassLevel>, ExtraTestClassLevelValidator>();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+
+        var thingToValidate = new TestClassLevel
+        {
+            TwentyOrMore = 22
+        };
+
+        var (isValid, errors) = await MiniValidator.TryValidateAsync(thingToValidate, serviceProvider);
+
+        Assert.False(isValid);
+        Assert.Single(errors);
+        Assert.Equal(nameof(TestValidatableType.TwentyOrMore), errors.Keys.First());
+    }
+
+    [Fact]
     public void TryValidate_Enumerable_With_ServiceProvider()
     {
         var serviceCollection = new ServiceCollection();
