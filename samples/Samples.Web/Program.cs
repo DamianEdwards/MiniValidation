@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using MiniValidation;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,9 @@ app.MapGet("/widgets", () =>
 app.MapGet("/widgets/{name}", (string name) =>
     new Widget { Name = name });
 
+app.MapGet("/widgets2/{name}", ([AsParameters] GetWidgets2Model model) =>
+    new Widget { Name = model.Name });
+
 app.MapPost("/widgets", Results<ValidationProblem, Created<Widget>> (Widget widget) =>
     !MiniValidator.TryValidate(widget, out var errors)
         ? TypedResults.ValidationProblem(errors)
@@ -34,6 +38,12 @@ app.MapPost("/widgets/custom-validation", Results<ValidationProblem, Created<Wid
         : TypedResults.Created($"/widgets/{widget.Name}", widget));
 
 app.Run();
+
+class GetWidgets2Model
+{
+    [FromRoute, RegularExpression("^(hello|world)$")]
+    public string? Name { get; set; }
+}
 
 class Widget
 {
@@ -49,7 +59,7 @@ class WidgetWithCustomValidation : Widget, IValidatableObject
     {
         if (string.Equals(Name, "Widget", StringComparison.OrdinalIgnoreCase))
         {
-            yield return new($"Cannot name a widget '{Name}'.", new[] { nameof(Name) });
+            yield return new($"Cannot name a widget '{Name}'.", [nameof(Name)]);
         }
     }
 }
