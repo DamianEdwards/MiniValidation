@@ -464,4 +464,23 @@ public class TryValidate
         Assert.Single(errors["PropertyToBeRequired"]);
         Assert.Single(errors["AnotherProperty"]);
     }
+
+
+    private class TestResults
+    {
+        [MinLength(3)]
+        public string ErrorCode { get; set; } = string.Empty;
+    }
+
+    [Fact]
+    public void MinLengthAttribute_ShouldNotProduceDuplicateErrors()
+    {
+        var testObj = new TestResults { ErrorCode = "12" };
+        var isValid = MiniValidator.TryValidate(testObj, out var errors);
+
+        Assert.False(isValid);
+        Assert.True(errors.ContainsKey(nameof(TestResults.ErrorCode)));
+        var errorMessages = errors[nameof(TestResults.ErrorCode)];
+        Assert.Single(errorMessages);
+    }  
 }
