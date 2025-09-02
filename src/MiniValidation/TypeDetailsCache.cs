@@ -212,6 +212,15 @@ internal class TypeDetailsCache
             }
         }
 
+        // Deduplicate validation attributes by type and error message
+        if (validationAttributes is not null)
+        {
+            validationAttributes = validationAttributes
+                .GroupBy(a => a.GetType().FullName + ":" + a.FormatErrorMessage(property.Name))
+                .Select(g => g.First())
+                .ToList();
+        }
+
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
     }
 
