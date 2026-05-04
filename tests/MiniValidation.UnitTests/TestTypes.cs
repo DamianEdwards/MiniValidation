@@ -267,3 +267,20 @@ class TestTypeWithNotImplementedProperty
 
     public TestTypeForTypeDescriptor NotImplementedProperty => throw new Exception();
 }
+
+class TestTypeWithFuncProperty
+{
+    public Func<object?> SomeFunc { get; set; } = () => null;
+}
+
+#if NET6_0_OR_GREATER
+class TestTypeWithJsonSerializerOptions
+{
+    public System.Text.Json.JsonSerializerOptions Options { get; set; } = new(System.Text.Json.JsonSerializerDefaults.Web);
+}
+#endif
+
+class TestTypeWithObjectPayload
+{
+    public object? Payload { get; set; }
+}

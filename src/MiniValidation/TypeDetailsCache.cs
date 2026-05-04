@@ -48,7 +48,7 @@ internal class TypeDetailsCache
             return;
         }
 
-        if (DoNotRecurseIntoPropertiesOf(type))
+        if (DoNotRecurseIntoPropertiesOf(type) || IsNonValidatableType(type))
         {
             _cache[type] = (_emptyPropertyDetails, false);
             return;
@@ -89,6 +89,7 @@ internal class TypeDetailsCache
             validationAttributes ??= Array.Empty<ValidationAttribute>();
             var hasValidationOnProperty = validationAttributes.Length > 0;
             var hasSkipRecursionOnProperty = skipRecursionAttribute is not null;
+            var propertyTypeIsNonValidatable = IsNonValidatableType(property.PropertyType);
             var enumerableType = GetEnumerableType(property.PropertyType);
             if (enumerableType != null)
             {
@@ -109,11 +110,12 @@ internal class TypeDetailsCache
             var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var typeCache) && typeCache.Properties.Length > 0;
             var propertyTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType)
                                                   || typeof(IAsyncValidatableObject).IsAssignableFrom(property.PropertyType);
-            var propertyTypeSupportsPolymorphism = !property.PropertyType.IsSealed;
+            var propertyTypeSupportsPolymorphism = !propertyTypeIsNonValidatable && !property.PropertyType.IsSealed;
             var enumerableTypeHasProperties = enumerableType != null
                 && _cache.TryGetValue(enumerableType, out var enumProperties)
                 && enumProperties.Properties.Length > 0;
-            var recurse = (enumerableTypeHasProperties || propertyTypeHasProperties
+            var recurse = !propertyTypeIsNonValidatable
+                && (enumerableTypeHasProperties || propertyTypeHasProperties
                 || propertyTypeIsValidatableObject
                 || propertyTypeSupportsPolymorphism)
                 && !hasSkipRecursionOnProperty;
@@ -161,6 +163,28 @@ internal class TypeDetailsCache
         || type == typeof(TimeOnly)
 #endif
         ;
+
+    internal static bool IsNonValidatableType(Type type) =>
+        typeof(Delegate).IsAssignableFrom(type)
+        || typeof(MemberInfo).IsAssignableFrom(type)
+        || typeof(ParameterInfo).IsAssignableFrom(type)
+        || typeof(Module).IsAssignableFrom(type)
+        || typeof(Assembly).IsAssignableFrom(type)
+        || IsKnownNonValidatableFrameworkType(type);
+
+    private static bool IsKnownNonValidatableFrameworkType(Type type)
+    {
+        var @namespace = type.Namespace;
+        return @namespace is not null
+            && (@namespace == "System.Text.Json"
+                || @namespace.StartsWith("System.Text.Json.", StringComparison.Ordinal)
+                || @namespace == "Newtonsoft.Json.Linq"
+                || @namespace.StartsWith("Newtonsoft.Json.Linq.", StringComparison.Ordinal)
+                || @namespace == "Microsoft.AspNetCore.JsonPatch"
+                || @namespace.StartsWith("Microsoft.AspNetCore.JsonPatch.", StringComparison.Ordinal)
+                || @namespace == "Microsoft.AspNetCore.OData.Deltas"
+                || @namespace.StartsWith("Microsoft.AspNetCore.OData.Deltas.", StringComparison.Ordinal));
+    }
 
     private static (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(ParameterInfo[]? primaryCtorParameters, PropertyInfo property)
     {

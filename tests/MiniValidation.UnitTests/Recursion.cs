@@ -492,4 +492,38 @@ public class Recursion
 
         Assert.True(isValid);
     }
+
+    [Fact]
+    public void Valid_When_Model_Has_Func_Property()
+    {
+        var result = MiniValidator.TryValidate(new TestTypeWithFuncProperty(), out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void Valid_When_Model_Has_JsonSerializerOptions_Property()
+    {
+        var result = MiniValidator.TryValidate(new TestTypeWithJsonSerializerOptions(), out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+#endif
+
+    [Fact]
+    public void Valid_When_Object_Property_Has_JTokenLike_Value_With_Throwing_Getter()
+    {
+        var thingToValidate = new TestTypeWithObjectPayload
+        {
+            Payload = new Newtonsoft.Json.Linq.FakeJValue()
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
 }
