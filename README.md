@@ -68,6 +68,39 @@ class Widget : IValidatableObject
 }
 ```
 
+### Use external validators
+
+External validators can be resolved from the `IServiceProvider` passed to `MiniValidator`. Register one or more `IValidate<T>` services (or `IAsyncValidate<T>` services when calling `TryValidateAsync`):
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.DependencyInjection;
+using MiniValidation;
+
+var services = new ServiceCollection();
+services.AddSingleton<IValidate<Widget>, WidgetValidator>();
+using var serviceProvider = services.BuildServiceProvider();
+
+var widget = new Widget { Name = "" };
+var isValid = MiniValidator.TryValidate(widget, serviceProvider, out var errors);
+
+class Widget
+{
+    public string? Name { get; set; }
+}
+
+class WidgetValidator : IValidate<Widget>
+{
+    public IEnumerable<ValidationResult> Validate(Widget target, ValidationContext validationContext)
+    {
+        if (string.IsNullOrWhiteSpace(target.Name))
+        {
+            yield return new ValidationResult("Name is required.", new[] { nameof(Widget.Name) });
+        }
+    }
+}
+```
+
 ### Console app
 
 ```csharp
