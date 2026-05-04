@@ -378,9 +378,8 @@ public static class MiniValidator
         }
 
         // Once we get to this point we have to box the target in order to track whether we've validated it or not
-        if (validatedObjects.ContainsKey(target))
+        if (validatedObjects.TryGetValue(target, out var result))
         {
-            var result = validatedObjects[target];
             // If there's a null result it means this object is the one currently being validated
             // so just skip this reference to it by returning true. If there is a result it means
             // we already validated this object as part of this validation operation.
@@ -436,11 +435,11 @@ public static class MiniValidator
         if (recurse && currentDepth <= MaxDepth)
         {
             // Validate IEnumerable
-            if (target is IEnumerable)
+            if (target is IEnumerable targets)
             {
                 RuntimeHelpers.EnsureSufficientExecutionStack();
 
-                var validateTask = TryValidateEnumerable(target, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
+                var validateTask = TryValidateEnumerable(targets, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, prefix, currentDepth);
 
                 try
                 {
@@ -468,11 +467,11 @@ public static class MiniValidator
                     {
                         RuntimeHelpers.EnsureSufficientExecutionStack();
 
-                        if (propertyDetails.IsEnumerable)
+                        if (propertyDetails.IsEnumerable && propertyValue is IEnumerable propertyValues)
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}";
 
-                            var validateTask = TryValidateEnumerable(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
+                            var validateTask = TryValidateEnumerable(propertyValues, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
                             try
                             {
                                 ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
@@ -486,7 +485,7 @@ public static class MiniValidator
 
                             isValid = await validateTask.ConfigureAwait(false) && isValid;
                         }
-                        else
+                        else if (!propertyDetails.IsEnumerable)
                         {
                             var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
 
@@ -509,10 +508,8 @@ public static class MiniValidator
             }
         }
 
-        if (typeof(IValidatableObject).IsAssignableFrom(targetType))
+        if (target is IValidatableObject validatable)
         {
-            var validatable = (IValidatableObject)target;
-
             // Reset validation context
             validationContext.MemberName = null;
             validationContext.DisplayName = validationContext.ObjectType.Name;
@@ -524,15 +521,13 @@ public static class MiniValidator
             }
         }
 
-        if ((isValid || allowAsync) && typeof(IAsyncValidatableObject).IsAssignableFrom(targetType))
+        if ((isValid || allowAsync) && target is IAsyncValidatableObject asyncValidatable)
         {
-            var validatable = (IAsyncValidatableObject)target;
-
             // Reset validation context
             validationContext.MemberName = null;
             validationContext.DisplayName = validationContext.ObjectType.Name;
 
-            var validateTask = validatable.ValidateAsync(validationContext);
+            var validateTask = asyncValidatable.ValidateAsync(validationContext);
             ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
 
             var validatableResults = await validateTask.ConfigureAwait(false);
@@ -566,7 +561,7 @@ public static class MiniValidator
 #else
     private static async Task<bool> TryValidateEnumerable(
 #endif
-        object target,
+        IEnumerable items,
         IServiceProvider? serviceProvider,
         bool recurse,
         bool allowAsync,
@@ -577,34 +572,31 @@ public static class MiniValidator
         int currentDepth = 0)
     {
         var isValid = true;
-        if (target is IEnumerable items)
+        // Validate each instance in the collection
+        var index = 0;
+        foreach (var item in items)
         {
-            // Validate each instance in the collection
-            var index = 0;
-            foreach (var item in items)
+            if (item is null)
             {
-                if (item is null)
-                {
-                    continue;
-                }
-
-                var itemPrefix = $"{prefix}[{index}].";
-
-                var validateTask = TryValidateImpl(item, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
-                try
-                {
-                    ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
-                }
-                catch (Exception)
-                {
-                    // Always observe the ValueTask
-                    _ = await validateTask.ConfigureAwait(false);
-                    throw;
-                }
-
-                isValid = await validateTask.ConfigureAwait(false) && isValid;
-                index++;
+                continue;
             }
+
+            var itemPrefix = $"{prefix}[{index}].";
+
+            var validateTask = TryValidateImpl(item, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, itemPrefix, currentDepth + 1);
+            try
+            {
+                ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
+            }
+            catch (Exception)
+            {
+                // Always observe the ValueTask
+                _ = await validateTask.ConfigureAwait(false);
+                throw;
+            }
+
+            isValid = await validateTask.ConfigureAwait(false) && isValid;
+            index++;
         }
         return isValid;
     }
