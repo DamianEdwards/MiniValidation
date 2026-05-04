@@ -264,7 +264,7 @@ public class TryValidate
     }
 
     [Fact]
-    public void ValidatableObject_Is_Not_Validated_When_Has_Invalid_Attributes()
+    public void ValidatableObject_Validate_Member_Errors_Are_Aggregated_With_Invalid_Attributes()
     {
         var thingToValidate = new TestValidatableType
         {
@@ -275,8 +275,26 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Single(errors);
-        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+        Assert.Equal(2, errors.Count);
+        Assert.Contains(nameof(TestValidatableType.TenOrMore), errors.Keys);
+        Assert.Contains(nameof(TestValidatableType.TwentyOrMore), errors.Keys);
+    }
+
+    [Fact]
+    public void ValidatableObject_Validate_Class_Level_Errors_Are_Aggregated_With_Invalid_Attributes()
+    {
+        var thingToValidate = new TestTypeWithClassLevelValidation
+        {
+            RequiredName = null,
+            IsValid = false
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains(nameof(TestTypeWithClassLevelValidation.RequiredName), errors.Keys);
+        Assert.Contains("", errors.Keys);
     }
 
     [Fact]
