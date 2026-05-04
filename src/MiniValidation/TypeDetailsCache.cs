@@ -14,6 +14,21 @@ internal class TypeDetailsCache
     private static readonly PropertyDetails[] _emptyPropertyDetails = Array.Empty<PropertyDetails>();
     private readonly ConcurrentDictionary<Type, (PropertyDetails[] Properties, bool RequiresAsync)> _cache = new();
 
+    public TypeDetailsCache()
+    {
+        TypeDescriptor.Refreshed += args =>
+        {
+            if (args.TypeChanged is { } type)
+            {
+                _cache.TryRemove(type, out _);
+            }
+            else
+            {
+                _cache.Clear();
+            }
+        };
+    }
+
     public (PropertyDetails[] Properties, bool RequiresAsync) Get(Type? type)
     {
         if (type is null)
@@ -21,12 +36,13 @@ internal class TypeDetailsCache
             return (_emptyPropertyDetails, false);
         }
 
-        if (!_cache.ContainsKey(type))
+        (PropertyDetails[] Properties, bool RequiresAsync) details;
+        while (!_cache.TryGetValue(type, out details))
         {
             Visit(type);
         }
 
-        return _cache[type];
+        return details;
     }
 
     private void Visit(Type type)
