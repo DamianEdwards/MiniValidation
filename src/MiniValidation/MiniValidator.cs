@@ -371,6 +371,12 @@ public static class MiniValidator
             throw new ArgumentNullException(nameof(target));
         }
 
+        var targetType = target.GetType();
+        if (TypeDetailsCache.IsNonValidatableType(targetType))
+        {
+            return true;
+        }
+
         // Once we get to this point we have to box the target in order to track whether we've validated it or not
         if (validatedObjects.ContainsKey(target))
         {
@@ -384,7 +390,6 @@ public static class MiniValidator
         // Add current target to tracking dictionary in null (validating) state
         validatedObjects.Add(target, null);
 
-        var targetType = target.GetType();
         var (typeProperties, _) = _typeDetailsCache.Get(targetType);
 
         var isValid = true;
@@ -418,6 +423,7 @@ public static class MiniValidator
             }
 
             if (recurse && propertyValue is not null &&
+                !TypeDetailsCache.IsNonValidatableType(propertyValueType!) &&
                 (property.Recurse
                  || typeof(IValidatableObject).IsAssignableFrom(propertyValueType)
                  || typeof(IAsyncValidatableObject).IsAssignableFrom(propertyValueType)
