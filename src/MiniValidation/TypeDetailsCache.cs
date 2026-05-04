@@ -14,6 +14,21 @@ internal class TypeDetailsCache
     private static readonly PropertyDetails[] _emptyPropertyDetails = Array.Empty<PropertyDetails>();
     private readonly ConcurrentDictionary<Type, (PropertyDetails[] Properties, bool RequiresAsync)> _cache = new();
 
+    public TypeDetailsCache()
+    {
+        TypeDescriptor.Refreshed += args =>
+        {
+            if (args.TypeChanged is { } type)
+            {
+                _cache.TryRemove(type, out _);
+            }
+            else
+            {
+                _cache.Clear();
+            }
+        };
+    }
+
     public (PropertyDetails[] Properties, bool RequiresAsync) Get(Type? type)
     {
         if (type is null)
@@ -183,16 +198,17 @@ internal class TypeDetailsCache
             }
         }
 
-        var propertyAttributes = property.GetCustomAttributes();
+        var propertyAttributes = property.GetCustomAttributes().ToArray();
         var customAttributes = paramAttributes is not null
             ? paramAttributes.Concat(propertyAttributes)
-            : propertyAttributes;
+            : propertyAttributes.AsEnumerable();
 
         if (TryGetAttributesViaTypeDescriptor(property, out var typeDescriptorAttributes))
         {
             customAttributes = customAttributes
-                .Concat(typeDescriptorAttributes.Cast<Attribute>())
-                .Distinct();
+                .Concat(typeDescriptorAttributes
+                    .Cast<Attribute>()
+                    .Where(attr => !IsDuplicateTypeDescriptorAttribute(attr, propertyAttributes)));
         }
 
         foreach (var attr in customAttributes)
@@ -213,6 +229,116 @@ internal class TypeDetailsCache
         }
 
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
+    }
+
+    private static bool IsDuplicateTypeDescriptorAttribute(Attribute typeDescriptorAttribute, Attribute[] propertyAttributes)
+    {
+        foreach (var propertyAttribute in propertyAttributes)
+        {
+            if (AreEquivalentAttributes(propertyAttribute, typeDescriptorAttribute))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool AreEquivalentAttributes(Attribute left, Attribute right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is not ValidationAttribute || right is not ValidationAttribute)
+        {
+            return false;
+        }
+
+        var attributeType = left.GetType();
+        if (attributeType != right.GetType() || !Equals(left.TypeId, right.TypeId))
+        {
+            return false;
+        }
+
+        foreach (var property in attributeType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!property.CanRead || property.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
+            if (!TryGetPropertyValue(property, left, out var leftValue)
+                || !TryGetPropertyValue(property, right, out var rightValue)
+                || !AreAttributeValuesEqual(leftValue, rightValue))
+            {
+                return false;
+            }
+        }
+
+        if (attributeType.Assembly != typeof(ValidationAttribute).Assembly)
+        {
+            for (var currentType = attributeType; currentType is not null && currentType != typeof(object); currentType = currentType.BaseType)
+            {
+                foreach (var field in currentType.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (!AreAttributeValuesEqual(field.GetValue(left), field.GetValue(right)))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryGetPropertyValue(PropertyInfo property, Attribute attribute, out object? value)
+    {
+        try
+        {
+            value = property.GetValue(attribute);
+            return true;
+        }
+        catch
+        {
+            value = null;
+            return false;
+        }
+    }
+
+    private static bool AreAttributeValuesEqual(object? left, object? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        if (left is Array leftArray && right is Array rightArray)
+        {
+            if (leftArray.Length != rightArray.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < leftArray.Length; i++)
+            {
+                if (!Equals(leftArray.GetValue(i), rightArray.GetValue(i)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return Equals(left, right);
     }
 
     private static bool TryGetAttributesViaTypeDescriptor(PropertyInfo property, [NotNullWhen(true)] out IEnumerable<Attribute>? typeDescriptorAttributes)
