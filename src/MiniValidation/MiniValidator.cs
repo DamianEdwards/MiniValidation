@@ -509,7 +509,7 @@ public static class MiniValidator
             }
         }
 
-        if (isValid && typeof(IValidatableObject).IsAssignableFrom(targetType))
+        if (typeof(IValidatableObject).IsAssignableFrom(targetType))
         {
             var validatable = (IValidatableObject)target;
 
@@ -520,12 +520,11 @@ public static class MiniValidator
             var validatableResults = validatable.Validate(validationContext);
             if (validatableResults is not null)
             {
-                ProcessValidationResults(validatableResults, workingErrors, prefix);
-                isValid = workingErrors.Count == 0 && isValid;
+                isValid = ProcessValidationResults(validatableResults, workingErrors, prefix) && isValid;
             }
         }
 
-        if (isValid && typeof(IAsyncValidatableObject).IsAssignableFrom(targetType))
+        if ((isValid || allowAsync) && typeof(IAsyncValidatableObject).IsAssignableFrom(targetType))
         {
             var validatable = (IAsyncValidatableObject)target;
 
@@ -539,8 +538,7 @@ public static class MiniValidator
             var validatableResults = await validateTask.ConfigureAwait(false);
             if (validatableResults is not null)
             {
-                ProcessValidationResults(validatableResults, workingErrors, prefix);
-                isValid = workingErrors.Count == 0 && isValid;
+                isValid = ProcessValidationResults(validatableResults, workingErrors, prefix) && isValid;
             }
         }
 
@@ -604,12 +602,7 @@ public static class MiniValidator
                     throw;
                 }
 
-                isValid = await validateTask.ConfigureAwait(false);
-
-                if (!isValid)
-                {
-                    break;
-                }
+                isValid = await validateTask.ConfigureAwait(false) && isValid;
                 index++;
             }
         }
@@ -639,10 +632,13 @@ public static class MiniValidator
         return result;
     }
 
-    private static void ProcessValidationResults(IEnumerable<ValidationResult> validationResults, Dictionary<string, List<string>> errors, string? prefix)
+    private static bool ProcessValidationResults(IEnumerable<ValidationResult> validationResults, Dictionary<string, List<string>> errors, string? prefix)
     {
+        var isValid = true;
+
         foreach (var result in validationResults)
         {
+            isValid = false;
             var hasMemberNames = false;
             foreach (var memberName in result.MemberNames)
             {
@@ -658,13 +654,27 @@ public static class MiniValidator
             if (!hasMemberNames)
             {
                 // Class level error message
-                var key = "";
+                var key = GetClassLevelKey(prefix);
                 if (!errors.ContainsKey(key))
                 {
                     errors.Add(key, new());
                 }
                 errors[key].Add(result.ErrorMessage ?? "");
             }
+        }
+
+        return isValid;
+
+        static string GetClassLevelKey(string? prefix)
+        {
+            if (string.IsNullOrEmpty(prefix))
+            {
+                return "";
+            }
+
+            return prefix!.EndsWith(".", StringComparison.Ordinal)
+                ? prefix.Substring(0, prefix.Length - 1)
+                : prefix;
         }
     }
 

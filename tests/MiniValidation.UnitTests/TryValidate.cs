@@ -264,7 +264,7 @@ public class TryValidate
     }
 
     [Fact]
-    public void ValidatableObject_Is_Not_Validated_When_Has_Invalid_Attributes()
+    public void ValidatableObject_Validate_Member_Errors_Are_Aggregated_With_Invalid_Attributes()
     {
         var thingToValidate = new TestValidatableType
         {
@@ -275,8 +275,26 @@ public class TryValidate
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
-        Assert.Single(errors);
-        Assert.Equal(nameof(TestValidatableType.TenOrMore), errors.Keys.First());
+        Assert.Equal(2, errors.Count);
+        Assert.Contains(nameof(TestValidatableType.TenOrMore), errors.Keys);
+        Assert.Contains(nameof(TestValidatableType.TwentyOrMore), errors.Keys);
+    }
+
+    [Fact]
+    public void ValidatableObject_Validate_Class_Level_Errors_Are_Aggregated_With_Invalid_Attributes()
+    {
+        var thingToValidate = new TestTypeWithClassLevelValidation
+        {
+            RequiredName = null,
+            IsValid = false
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains(nameof(TestTypeWithClassLevelValidation.RequiredName), errors.Keys);
+        Assert.Contains("", errors.Keys);
     }
 
     [Fact]
@@ -463,5 +481,81 @@ public class TryValidate
 
         Assert.Single(errors["PropertyToBeRequired"]);
         Assert.Single(errors["AnotherProperty"]);
+    }
+
+    [Fact]
+    public void TryValidate_Does_Not_Duplicate_Validation_Attributes_From_TypeDescriptor()
+    {
+        var thingToValidate = new TestTypeWithMinLength { ErrorCode = "12" };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithMinLength.ErrorCode), entry.Key);
+        Assert.Single(entry.Value);
+    }
+
+    [Fact]
+    public void TryValidate_Preserves_Multiple_Distinct_Validation_Attributes_Of_Same_Type()
+    {
+        var thingToValidate = new TestTypeWithMultipleSameTypeValidationAttributes();
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithMultipleSameTypeValidationAttributes.Name), entry.Key);
+        Assert.Equal(new[] { "Invalid.", "Invalid." }, entry.Value);
+    }
+
+    [Fact]
+    public void TryValidate_Preserves_Distinct_Validation_Attribute_Attached_Via_TypeDescriptor()
+    {
+        typeof(TestTypeWithMinLengthAndTypeDescriptorAttribute).AttachAttribute(
+            nameof(TestTypeWithMinLengthAndTypeDescriptorAttribute.ErrorCode),
+            _ => new MinLengthAttribute(5));
+
+        var thingToValidate = new TestTypeWithMinLengthAndTypeDescriptorAttribute { ErrorCode = "12" };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithMinLengthAndTypeDescriptorAttribute.ErrorCode), entry.Key);
+        Assert.Equal(2, entry.Value.Length);
+    }
+
+    class TestTypeWithMinLength
+    {
+        [MinLength(3)]
+        public string? ErrorCode { get; set; }
+    }
+
+    class TestTypeWithMinLengthAndTypeDescriptorAttribute
+    {
+        [MinLength(3)]
+        public string? ErrorCode { get; set; }
+    }
+
+    class TestTypeWithMultipleSameTypeValidationAttributes
+    {
+        [AlwaysInvalid("First")]
+        [AlwaysInvalid("Second")]
+        public string? Name { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+    class AlwaysInvalidAttribute : ValidationAttribute
+    {
+        public AlwaysInvalidAttribute(string id)
+        {
+            Id = id;
+            ErrorMessage = "Invalid.";
+        }
+
+        public string Id { get; }
+
+        public override bool IsValid(object? value) => false;
     }
 }

@@ -160,7 +160,7 @@ public class Recursion
     }
 
     [Fact]
-    public void First_Error_In_Root_Enumerable_Returns_Immediately()
+    public void All_Errors_In_Root_Enumerable_Are_Reported()
     {
         var thingToValidate = new List<TestType>
         {
@@ -171,13 +171,13 @@ public class Recursion
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
-        Assert.Single(errors);
-        var entry = Assert.Single(errors);
-        Assert.Equal($"[0].{nameof(TestType.RequiredName)}", entry.Key);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains($"[0].{nameof(TestType.RequiredName)}", errors.Keys);
+        Assert.Contains($"[1].{nameof(TestType.RequiredName)}", errors.Keys);
     }
 
     [Fact]
-    public void First_Error_In_Descendant_Enumerable_Returns_Immediately()
+    public void All_Errors_In_Descendant_Enumerable_Are_Reported()
     {
         var thingToValidate = new TestType();
         thingToValidate.Children.Add(new() { MinLengthFive = "123" });
@@ -186,9 +186,26 @@ public class Recursion
         var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
 
         Assert.False(result);
-        Assert.Single(errors);
-        var entry = Assert.Single(errors);
-        Assert.Equal($"{nameof(TestType.Children)}[0].{nameof(TestChildType.MinLengthFive)}", entry.Key);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains($"{nameof(TestType.Children)}[0].{nameof(TestChildType.MinLengthFive)}", errors.Keys);
+        Assert.Contains($"{nameof(TestType.Children)}[1].{nameof(TestChildType.RequiredCategory)}", errors.Keys);
+    }
+
+    [Fact]
+    public void Class_Level_Errors_In_Root_Enumerable_Are_Keyed_By_Item()
+    {
+        var thingToValidate = new List<TestClassLevelValidatableOnlyType>
+        {
+            new() { TwentyOrMore = 12 },
+            new() { TwentyOrMore = 12 },
+        };
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains("[0]", errors.Keys);
+        Assert.Contains("[1]", errors.Keys);
     }
 
     [Fact]

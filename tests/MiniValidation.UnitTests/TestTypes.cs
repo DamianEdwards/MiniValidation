@@ -82,6 +82,22 @@ class TestClassLevelValidatableOnlyTypeWithServiceProvider : IValidatableObject
     }
 }
 
+class TestTypeWithClassLevelValidation : IValidatableObject
+{
+    [Required]
+    public string? RequiredName { get; set; } = "Default";
+
+    public bool IsValid { get; set; } = true;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!IsValid)
+        {
+            yield return new ValidationResult($"{validationContext.DisplayName} is invalid.");
+        }
+    }
+}
+
 class TestClassWithEnumerable<TEnumerable>
 {
     public IEnumerable<TEnumerable>? Enumerable { get; set; }
