@@ -43,3 +43,4 @@ jobs:
         with:
           keep: 5
           names: ${{ env.PACKAGE_ID }}
+          type: nuget
