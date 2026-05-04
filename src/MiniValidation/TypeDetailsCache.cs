@@ -36,12 +36,13 @@ internal class TypeDetailsCache
             return (_emptyPropertyDetails, false);
         }
 
-        if (!_cache.ContainsKey(type))
+        (PropertyDetails[] Properties, bool RequiresAsync) details;
+        while (!_cache.TryGetValue(type, out details))
         {
             Visit(type);
         }
 
-        return _cache[type];
+        return details;
     }
 
     private void Visit(Type type)
