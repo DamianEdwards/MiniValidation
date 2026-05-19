@@ -11,8 +11,8 @@ Install the library from [NuGet](https://www.nuget.org/packages/MiniValidation):
 ❯ dotnet add package MiniValidation
 ```
 
-### ASP.NET Core 6+ Projects
-If installing into an ASP.NET Core 6+ project, consider using the [MinimalApis.Extensions](https://www.nuget.org/packages/MinimalApis.Extensions) package instead, which adds extensions specific to ASP.NET Core, including a validation endpoint filter for .NET 7 apps:
+### ASP.NET Core 8+ Projects
+If installing into an ASP.NET Core 8+ project, consider using the [MinimalApis.Extensions](https://www.nuget.org/packages/MinimalApis.Extensions) package instead, which adds extensions specific to ASP.NET Core, including a validation endpoint filter:
 ``` console
 ❯ dotnet add package MinimalApis.Extensions
 ```
@@ -154,6 +154,7 @@ class WidgetWithCustomValidation : Widget, IValidatableObject
     }
 }
 ```
+
 ``` console
 ❯ widget.exe
 Widget 'widget' is valid!
@@ -180,7 +181,7 @@ Widget 'MiniValidation' is valid!
 Widget 'MiniValidation' is valid!
 ```
 
-### Web app (.NET 6)
+### Web app (.NET 8+)
 ```csharp
 using System.ComponentModel.DataAnnotations;
 using MiniValidation;
