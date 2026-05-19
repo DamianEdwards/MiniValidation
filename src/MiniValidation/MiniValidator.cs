@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -17,6 +19,11 @@ public static class MiniValidator
 {
     private static readonly TypeDetailsCache _typeDetailsCache = new();
     private static readonly IDictionary<string, string[]> _emptyErrors = new ReadOnlyDictionary<string, string[]>(new Dictionary<string, string[]>());
+    private static readonly ConcurrentDictionary<Type, ExternalValidateDelegate> _externalValidateDelegates = new();
+    private static readonly ConcurrentDictionary<Type, ExternalValidateAsyncDelegate> _externalValidateAsyncDelegates = new();
+
+    private delegate IEnumerable<ValidationResult>? ExternalValidateDelegate(object validator, object target, ValidationContext validationContext);
+    private delegate Task<IEnumerable<ValidationResult>> ExternalValidateAsyncDelegate(object validator, object target, ValidationContext validationContext);
 
     /// <summary>
     /// Gets or sets the maximum depth allowed when validating an object with recursion enabled.
@@ -45,6 +52,33 @@ public static class MiniValidator
             || typeof(IAsyncValidatableObject).IsAssignableFrom(targetType)
             || (recurse && typeof(IEnumerable).IsAssignableFrom(targetType))
             || _typeDetailsCache.Get(targetType).Properties.Any(p => p.HasValidationAttributes || recurse);
+    }
+
+    /// <summary>
+    /// Determines if the specified <see cref="Type"/> has anything to validate, including external validators resolved from a service provider.
+    /// </summary>
+    /// <remarks>
+    /// Objects of types with nothing to validate will always return <c>true</c> when passed to <see cref="TryValidate{TTarget}(TTarget, bool, out IDictionary{string, string[]})"/>.
+    /// </remarks>
+    /// <param name="targetType">The <see cref="Type"/>.</param>
+    /// <param name="serviceProvider">The service provider to use when resolving external validators.</param>
+    /// <param name="recurse"><c>true</c> to recursively check descendant types; if <c>false</c> only simple values directly on the target type are checked.</param>
+    /// <returns><c>true</c> if <paramref name="targetType"/> has anything to validate, <c>false</c> if not.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="targetType"/> or <paramref name="serviceProvider"/> is <c>null</c>.</exception>
+    public static bool RequiresValidation(Type targetType, IServiceProvider serviceProvider, bool recurse = true)
+    {
+        if (targetType is null)
+        {
+            throw new ArgumentNullException(nameof(targetType));
+        }
+
+        if (serviceProvider is null)
+        {
+            throw new ArgumentNullException(nameof(serviceProvider));
+        }
+
+        return RequiresValidation(targetType, recurse)
+            || RequiresExternalValidation(targetType, serviceProvider, recurse, new HashSet<Type>());
     }
 
     /// <summary>
@@ -163,7 +197,7 @@ public static class MiniValidator
             throw new ArgumentNullException(nameof(target));
         }
 
-        if (!RequiresValidation(target.GetType(), recurse))
+        if (serviceProvider is null && !RequiresValidation(target.GetType(), recurse))
         {
             errors = _emptyErrors;
 
@@ -306,7 +340,7 @@ public static class MiniValidator
 
         IDictionary<string, string[]>? errors;
 
-        if (!RequiresValidation(target.GetType(), recurse))
+        if (serviceProvider is null && !RequiresValidation(target.GetType(), recurse))
         {
             errors = _emptyErrors;
 
@@ -423,13 +457,20 @@ public static class MiniValidator
 
             if (recurse && propertyValue is not null &&
                 !TypeDetailsCache.IsNonValidatableType(propertyValueType!) &&
+                !TypeDetailsCache.DoNotRecurseIntoPropertiesOf(propertyValueType!) &&
                 (property.Recurse
+                 || serviceProvider is not null
                  || typeof(IValidatableObject).IsAssignableFrom(propertyValueType)
                  || typeof(IAsyncValidatableObject).IsAssignableFrom(propertyValueType)
                  || properties.Any(p => p.Recurse)))
             {
                 propertiesToRecurse!.Add(property, propertyValue);
             }
+        }
+
+        if (recurse && serviceProvider is not null)
+        {
+            AddServiceProviderPropertiesToRecurse(target, serviceProvider, typeProperties, propertiesToRecurse!);
         }
 
         if (recurse && currentDepth <= MaxDepth)
@@ -521,6 +562,15 @@ public static class MiniValidator
             }
         }
 
+        if (serviceProvider is not null)
+        {
+            var externalResults = ValidateExternal(target, targetType, serviceProvider, validationContext);
+            if (externalResults is not null)
+            {
+                isValid = ProcessValidationResults(externalResults, workingErrors, prefix) && isValid;
+            }
+        }
+
         if ((isValid || allowAsync) && target is IAsyncValidatableObject asyncValidatable)
         {
             // Reset validation context
@@ -534,6 +584,28 @@ public static class MiniValidator
             if (validatableResults is not null)
             {
                 isValid = ProcessValidationResults(validatableResults, workingErrors, prefix) && isValid;
+            }
+        }
+
+        if (serviceProvider is not null)
+        {
+            var validateExternalAsyncTask = ValidateExternalAsync(target, targetType, serviceProvider, validationContext, allowAsync);
+
+            try
+            {
+                ThrowIfAsyncNotAllowed(validateExternalAsyncTask.IsCompleted, allowAsync);
+            }
+            catch (Exception)
+            {
+                // Always observe the ValueTask
+                _ = await validateExternalAsyncTask.ConfigureAwait(false);
+                throw;
+            }
+
+            var externalAsyncResults = await validateExternalAsyncTask.ConfigureAwait(false);
+            if (externalAsyncResults is not null)
+            {
+                isValid = ProcessValidationResults(externalAsyncResults, workingErrors, prefix) && isValid;
             }
         }
 
@@ -553,6 +625,233 @@ public static class MiniValidator
         if (!allowAsync & !taskCompleted)
         {
             throw new InvalidOperationException($"An object in the validation graph requires async validation. Call the '{nameof(TryValidateAsync)}' method instead.");
+        }
+    }
+
+    private static IEnumerable<ValidationResult>? ValidateExternal(object target, Type targetType, IServiceProvider serviceProvider, ValidationContext validationContext)
+    {
+        var validatorServiceType = typeof(IValidate<>).MakeGenericType(targetType);
+        var validators = GetExternalValidators(serviceProvider, validatorServiceType);
+        if (validators is null)
+        {
+            return null;
+        }
+
+        List<ValidationResult>? results = null;
+        var validate = _externalValidateDelegates.GetOrAdd(targetType, CreateExternalValidateDelegate);
+        foreach (var validator in validators)
+        {
+            var validatorResults = validate(validator, target, validationContext);
+            if (validatorResults is null)
+            {
+                continue;
+            }
+
+            results ??= new();
+            results.AddRange(validatorResults);
+        }
+
+        return results;
+    }
+
+#if NET6_0_OR_GREATER
+    private static async ValueTask<IEnumerable<ValidationResult>?> ValidateExternalAsync(
+#else
+    private static async Task<IEnumerable<ValidationResult>?> ValidateExternalAsync(
+#endif
+        object target,
+        Type targetType,
+        IServiceProvider serviceProvider,
+        ValidationContext validationContext,
+        bool allowAsync)
+    {
+        var validatorServiceType = typeof(IAsyncValidate<>).MakeGenericType(targetType);
+        var validators = GetExternalValidators(serviceProvider, validatorServiceType);
+        if (validators is null)
+        {
+            return null;
+        }
+
+        ThrowIfAsyncNotAllowed(taskCompleted: false, allowAsync);
+
+        List<ValidationResult>? results = null;
+        var validate = _externalValidateAsyncDelegates.GetOrAdd(targetType, CreateExternalValidateAsyncDelegate);
+        foreach (var validator in validators)
+        {
+            var validatorResults = await validate(validator, target, validationContext).ConfigureAwait(false);
+            if (validatorResults is null)
+            {
+                continue;
+            }
+
+            results ??= new();
+            results.AddRange(validatorResults);
+        }
+
+        return results;
+    }
+
+    private static List<object>? GetExternalValidators(IServiceProvider serviceProvider, Type validatorServiceType)
+    {
+        var enumerableServiceType = typeof(IEnumerable<>).MakeGenericType(validatorServiceType);
+        var enumerableService = serviceProvider.GetService(enumerableServiceType);
+        if (enumerableService is IEnumerable enumerable)
+        {
+            List<object>? validators = null;
+            foreach (var validator in enumerable)
+            {
+                if (validator is null)
+                {
+                    continue;
+                }
+
+                if (!validatorServiceType.IsInstanceOfType(validator))
+                {
+                    throw new InvalidOperationException($"Service provider returned a service that is not assignable to {validatorServiceType}.");
+                }
+
+                validators ??= new();
+                validators.Add(validator);
+            }
+
+            if (validators is not null)
+            {
+                return validators;
+            }
+        }
+        else if (enumerableService is not null)
+        {
+            throw new InvalidOperationException($"Service provider returned a service that is not assignable to {enumerableServiceType}.");
+        }
+
+        var service = serviceProvider.GetService(validatorServiceType);
+        if (service is null)
+        {
+            return null;
+        }
+
+        if (!validatorServiceType.IsInstanceOfType(service))
+        {
+            throw new InvalidOperationException($"Service provider returned a service that is not assignable to {validatorServiceType}.");
+        }
+
+        return new List<object> { service };
+    }
+
+    private static bool RequiresExternalValidation(Type targetType, IServiceProvider serviceProvider, bool recurse, HashSet<Type> visited)
+    {
+        if (!visited.Add(targetType))
+        {
+            return false;
+        }
+
+        if (GetExternalValidators(serviceProvider, typeof(IValidate<>).MakeGenericType(targetType)) is not null
+            || GetExternalValidators(serviceProvider, typeof(IAsyncValidate<>).MakeGenericType(targetType)) is not null)
+        {
+            return true;
+        }
+
+        if (!recurse)
+        {
+            return false;
+        }
+
+        var enumerableType = TypeDetailsCache.GetEnumerableType(targetType);
+        if (enumerableType is not null && RequiresExternalValidation(enumerableType, serviceProvider, recurse, visited))
+        {
+            return true;
+        }
+
+        if (TypeDetailsCache.DoNotRecurseIntoPropertiesOf(targetType) || TypeDetailsCache.IsNonValidatableType(targetType))
+        {
+            return false;
+        }
+
+        foreach (var property in targetType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy))
+        {
+            if (property.GetIndexParameters().Length > 0
+                || property.GetCustomAttributes(typeof(SkipRecursionAttribute), inherit: true).Length > 0)
+            {
+                continue;
+            }
+
+            if (RequiresExternalValidation(property.PropertyType, serviceProvider, recurse, visited))
+            {
+                return true;
+            }
+
+            var propertyEnumerableType = TypeDetailsCache.GetEnumerableType(property.PropertyType);
+            if (propertyEnumerableType is not null && RequiresExternalValidation(propertyEnumerableType, serviceProvider, recurse, visited))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static ExternalValidateDelegate CreateExternalValidateDelegate(Type targetType)
+    {
+        var method = typeof(MiniValidator).GetMethod(nameof(ValidateExternalCore), BindingFlags.NonPublic | BindingFlags.Static)!.MakeGenericMethod(targetType);
+        return (ExternalValidateDelegate)Delegate.CreateDelegate(typeof(ExternalValidateDelegate), method);
+    }
+
+    private static ExternalValidateAsyncDelegate CreateExternalValidateAsyncDelegate(Type targetType)
+    {
+        var method = typeof(MiniValidator).GetMethod(nameof(ValidateExternalAsyncCore), BindingFlags.NonPublic | BindingFlags.Static)!.MakeGenericMethod(targetType);
+        return (ExternalValidateAsyncDelegate)Delegate.CreateDelegate(typeof(ExternalValidateAsyncDelegate), method);
+    }
+
+    private static IEnumerable<ValidationResult>? ValidateExternalCore<TTarget>(object validator, object target, ValidationContext validationContext)
+    {
+        return ((IValidate<TTarget>)validator).Validate((TTarget)target, validationContext);
+    }
+
+    private static Task<IEnumerable<ValidationResult>> ValidateExternalAsyncCore<TTarget>(object validator, object target, ValidationContext validationContext)
+    {
+        return ((IAsyncValidate<TTarget>)validator).ValidateAsync((TTarget)target, validationContext);
+    }
+
+    private static void AddServiceProviderPropertiesToRecurse(object target, IServiceProvider serviceProvider, PropertyDetails[] cachedProperties, Dictionary<PropertyDetails, object> propertiesToRecurse)
+    {
+        var cachedPropertyNames = new HashSet<string>(cachedProperties.Select(property => property.Name), StringComparer.Ordinal);
+
+        foreach (var property in target.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy))
+        {
+            if (cachedPropertyNames.Contains(property.Name)
+                || property.GetIndexParameters().Length > 0
+                || property.GetCustomAttributes(typeof(SkipRecursionAttribute), inherit: true).Length > 0)
+            {
+                continue;
+            }
+
+            var propertyEnumerableType = TypeDetailsCache.GetEnumerableType(property.PropertyType);
+            if (!RequiresExternalValidation(property.PropertyType, serviceProvider, recurse: true, new HashSet<Type>())
+                && (propertyEnumerableType is null || !RequiresExternalValidation(propertyEnumerableType, serviceProvider, recurse: true, new HashSet<Type>())))
+            {
+                continue;
+            }
+
+            var getter = PropertyHelper.MakeNullSafeFastPropertyGetter(property);
+            var propertyValue = getter(target);
+            if (propertyValue is null)
+            {
+                continue;
+            }
+
+            var propertyValueType = propertyValue.GetType();
+            var valueEnumerableType = TypeDetailsCache.GetEnumerableType(propertyValueType);
+            if (valueEnumerableType is null
+                && TypeDetailsCache.DoNotRecurseIntoPropertiesOf(propertyValueType)
+                || TypeDetailsCache.IsNonValidatableType(propertyValueType))
+            {
+                continue;
+            }
+
+            var enumerableType = propertyEnumerableType ?? valueEnumerableType;
+            propertiesToRecurse.Add(
+                new PropertyDetails(property.Name, null, property.PropertyType, getter, Array.Empty<ValidationAttribute>(), true, enumerableType),
+                propertyValue);
         }
     }
 
