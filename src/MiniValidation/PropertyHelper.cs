@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace MiniValidation
@@ -35,6 +36,24 @@ namespace MiniValidation
                 propertyInfo!,
                 CallNullSafePropertyGetterOpenGenericMethod,
                 CallNullSafePropertyGetterByReferenceOpenGenericMethod);
+        }
+
+        public static Func<object, object?> MakeNullSafeFastFieldGetter(FieldInfo fieldInfo)
+        {
+            Debug.Assert(fieldInfo != null);
+            Debug.Assert(!fieldInfo!.IsStatic);
+
+            var target = Expression.Parameter(typeof(object), "target");
+            var body = Expression.Condition(
+                Expression.Equal(target, Expression.Constant(null)),
+                Expression.Constant(null, typeof(object)),
+                Expression.Convert(
+                    Expression.Field(
+                        Expression.Convert(target, fieldInfo.DeclaringType!),
+                        fieldInfo),
+                    typeof(object)));
+
+            return Expression.Lambda<Func<object, object?>>(body, target).Compile();
         }
 
         private static Func<object, object?> MakeFastPropertyGetter(

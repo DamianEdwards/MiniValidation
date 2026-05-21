@@ -11,8 +11,8 @@ namespace MiniValidation;
 
 internal class TypeDetailsCache
 {
-    private static readonly PropertyDetails[] _emptyPropertyDetails = Array.Empty<PropertyDetails>();
-    private readonly ConcurrentDictionary<Type, (PropertyDetails[] Properties, bool RequiresAsync)> _cache = new();
+    private static readonly MemberDetails[] _emptyMemberDetails = Array.Empty<MemberDetails>();
+    private readonly ConcurrentDictionary<Type, (MemberDetails[] Members, bool RequiresAsync)> _cache = new();
 
     public TypeDetailsCache()
     {
@@ -29,14 +29,14 @@ internal class TypeDetailsCache
         };
     }
 
-    public (PropertyDetails[] Properties, bool RequiresAsync) Get(Type? type)
+    public (MemberDetails[] Members, bool RequiresAsync) Get(Type? type)
     {
         if (type is null)
         {
-            return (_emptyPropertyDetails, false);
+            return (_emptyMemberDetails, false);
         }
 
-        (PropertyDetails[] Properties, bool RequiresAsync) details;
+        (MemberDetails[] Members, bool RequiresAsync) details;
         while (!_cache.TryGetValue(type, out details))
         {
             Visit(type);
@@ -64,9 +64,9 @@ internal class TypeDetailsCache
             return;
         }
 
-        if (DoNotRecurseIntoPropertiesOf(type) || IsNonValidatableType(type))
+        if (DoNotRecurseIntoMembersOf(type) || IsNonValidatableType(type))
         {
-            _cache[type] = (_emptyPropertyDetails, false);
+            _cache[type] = (_emptyMemberDetails, false);
             return;
         }
 
@@ -89,9 +89,9 @@ internal class TypeDetailsCache
             }
         }
 
-        List<PropertyDetails>? propertiesToValidate = null;
-        var hasPropertiesOfOwnType = false;
-        var hasValidatableProperties = false;
+        List<MemberDetails>? membersToValidate = null;
+        var hasMembersOfOwnType = false;
+        var hasValidatableMembers = false;
 
         foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy))
         {
@@ -102,69 +102,101 @@ internal class TypeDetailsCache
             }
 
             var (validationAttributes, displayAttribute, skipRecursionAttribute) = TypeDetailsCache.GetPropertyAttributes(primaryCtorParams, property);
+            VisitMember(
+                property.Name,
+                property.PropertyType,
+                PropertyHelper.MakeNullSafeFastPropertyGetter(property),
+                validationAttributes,
+                displayAttribute,
+                skipRecursionAttribute,
+                ref requiresAsync);
+        }
+
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy))
+        {
+            var (validationAttributes, displayAttribute, skipRecursionAttribute) = TypeDetailsCache.GetFieldAttributes(field);
+            VisitMember(
+                field.Name,
+                field.FieldType,
+                PropertyHelper.MakeNullSafeFastFieldGetter(field),
+                validationAttributes,
+                displayAttribute,
+                skipRecursionAttribute,
+                ref requiresAsync);
+        }
+
+        if (hasMembersOfOwnType && membersToValidate != null)
+        {
+            // Remove members of same type if there's nothing to validate on them
+            for (var i = membersToValidate.Count - 1; i >= 0; i--)
+            {
+                var member = membersToValidate[i];
+                var enumerableTypeHasMembers = member.EnumerableType != null
+                    && _cache.TryGetValue(member.EnumerableType, out var typeCache)
+                    && typeCache.Members.Length > 0;
+                var keepMember = member.Type != type || (hasValidatableMembers || enumerableTypeHasMembers);
+                if (!keepMember)
+                {
+                    membersToValidate.RemoveAt(i);
+                }
+            }
+        }
+
+        _cache[type] = (membersToValidate?.ToArray() ?? _emptyMemberDetails, requiresAsync);
+
+        void VisitMember(
+            string memberName,
+            Type memberType,
+            Func<object, object?> memberGetter,
+            ValidationAttribute[]? validationAttributes,
+            DisplayAttribute? displayAttribute,
+            SkipRecursionAttribute? skipRecursionAttribute,
+            ref bool requiresAsync)
+        {
             validationAttributes ??= Array.Empty<ValidationAttribute>();
-            var hasValidationOnProperty = validationAttributes.Length > 0;
-            var hasSkipRecursionOnProperty = skipRecursionAttribute is not null;
-            var propertyTypeIsNonValidatable = IsNonValidatableType(property.PropertyType);
-            var enumerableType = GetEnumerableType(property.PropertyType);
+            var hasValidationOnMember = validationAttributes.Length > 0;
+            var hasSkipRecursionOnMember = skipRecursionAttribute is not null;
+            var memberTypeIsNonValidatable = IsNonValidatableType(memberType);
+            var enumerableType = GetEnumerableType(memberType);
             if (enumerableType != null)
             {
                 Visit(enumerableType, visited, ref requiresAsync);
             }
 
-            // Defer fully checking properties that are of the same type we're currently building the cache for.
-            // We'll remove them at the end if any other validatable properties are present.
-            if (type == property.PropertyType && !hasSkipRecursionOnProperty)
+            // Defer fully checking members that are of the same type we're currently building the cache for.
+            // We'll remove them at the end if any other validatable members are present.
+            if (type == memberType && !hasSkipRecursionOnMember)
             {
-                propertiesToValidate ??= new List<PropertyDetails>();
-                propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes, true, enumerableType));
-                hasPropertiesOfOwnType = true;
-                continue;
+                membersToValidate ??= new List<MemberDetails>();
+                membersToValidate.Add(new(memberName, displayAttribute, memberType, memberGetter, validationAttributes, true, enumerableType));
+                hasMembersOfOwnType = true;
+                return;
             }
 
-            Visit(property.PropertyType, visited, ref requiresAsync);
-            var propertyTypeHasProperties = _cache.TryGetValue(property.PropertyType, out var typeCache) && typeCache.Properties.Length > 0;
-            var propertyTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(property.PropertyType)
-                                                  || typeof(IAsyncValidatableObject).IsAssignableFrom(property.PropertyType);
-            var propertyTypeSupportsPolymorphism = !propertyTypeIsNonValidatable && !property.PropertyType.IsSealed;
-            var enumerableTypeHasProperties = enumerableType != null
-                && _cache.TryGetValue(enumerableType, out var enumProperties)
-                && enumProperties.Properties.Length > 0;
-            var recurse = !propertyTypeIsNonValidatable
-                && (enumerableTypeHasProperties || propertyTypeHasProperties
-                || propertyTypeIsValidatableObject
-                || propertyTypeSupportsPolymorphism)
-                && !hasSkipRecursionOnProperty;
+            Visit(memberType, visited, ref requiresAsync);
+            var memberTypeHasMembers = _cache.TryGetValue(memberType, out var typeCache) && typeCache.Members.Length > 0;
+            var memberTypeIsValidatableObject = typeof(IValidatableObject).IsAssignableFrom(memberType)
+                                                || typeof(IAsyncValidatableObject).IsAssignableFrom(memberType);
+            var memberTypeSupportsPolymorphism = !memberTypeIsNonValidatable && !memberType.IsSealed;
+            var enumerableTypeHasMembers = enumerableType != null
+                && _cache.TryGetValue(enumerableType, out var enumMembers)
+                && enumMembers.Members.Length > 0;
+            var recurse = !memberTypeIsNonValidatable
+                && (enumerableTypeHasMembers || memberTypeHasMembers
+                || memberTypeIsValidatableObject
+                || memberTypeSupportsPolymorphism)
+                && !hasSkipRecursionOnMember;
 
-            if (recurse || hasValidationOnProperty)
+            if (recurse || hasValidationOnMember)
             {
-                propertiesToValidate ??= new List<PropertyDetails>();
-                propertiesToValidate.Add(new(property.Name, displayAttribute, property.PropertyType, PropertyHelper.MakeNullSafeFastPropertyGetter(property), validationAttributes, recurse, enumerableTypeHasProperties ? enumerableType : null));
-                hasValidatableProperties = true;
-            }
-        }
-
-        if (hasPropertiesOfOwnType && propertiesToValidate != null)
-        {
-            // Remove properties of same type if there's nothing to validate on them
-            for (var i = propertiesToValidate.Count - 1; i >= 0; i--)
-            {
-                var property = propertiesToValidate[i];
-                var enumerableTypeHasProperties = property.EnumerableType != null
-                    && _cache.TryGetValue(property.EnumerableType, out var typeCache)
-                    && typeCache.Properties.Length > 0;
-                var keepProperty = property.Type != type || (hasValidatableProperties || enumerableTypeHasProperties);
-                if (!keepProperty)
-                {
-                    propertiesToValidate.RemoveAt(i);
-                }
+                membersToValidate ??= new List<MemberDetails>();
+                membersToValidate.Add(new(memberName, displayAttribute, memberType, memberGetter, validationAttributes, recurse, enumerableTypeHasMembers ? enumerableType : null));
+                hasValidatableMembers = true;
             }
         }
-
-        _cache[type] = (propertiesToValidate?.ToArray() ?? _emptyPropertyDetails, requiresAsync);
     }
 
-    private static bool DoNotRecurseIntoPropertiesOf(Type type) =>
+    private static bool DoNotRecurseIntoMembersOf(Type type) =>
         type == typeof(object)
         || type.IsPrimitive
         || type.IsArray
@@ -204,10 +236,6 @@ internal class TypeDetailsCache
 
     private static (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetPropertyAttributes(ParameterInfo[]? primaryCtorParameters, PropertyInfo property)
     {
-        List<ValidationAttribute>? validationAttributes = null;
-        DisplayAttribute? displayAttribute = null;
-        SkipRecursionAttribute? skipRecursionAttribute = null;
-
         IEnumerable<Attribute>? paramAttributes = null;
         if (primaryCtorParameters is { } ctorParams)
         {
@@ -235,6 +263,20 @@ internal class TypeDetailsCache
                     .Cast<Attribute>()
                     .Where(attr => !IsDuplicateTypeDescriptorAttribute(attr, propertyAttributes)));
         }
+
+        return GetValidationMetadata(customAttributes);
+    }
+
+    private static (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetFieldAttributes(FieldInfo field)
+    {
+        return GetValidationMetadata(field.GetCustomAttributes().Cast<Attribute>());
+    }
+
+    private static (ValidationAttribute[]?, DisplayAttribute?, SkipRecursionAttribute?) GetValidationMetadata(IEnumerable<Attribute> customAttributes)
+    {
+        List<ValidationAttribute>? validationAttributes = null;
+        DisplayAttribute? displayAttribute = null;
+        SkipRecursionAttribute? skipRecursionAttribute = null;
 
         foreach (var attr in customAttributes)
         {
@@ -402,9 +444,9 @@ internal class TypeDetailsCache
     }
 }
 
-internal record PropertyDetails(string Name, DisplayAttribute? DisplayAttribute, Type Type, Func<object, object?> PropertyGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
+internal record MemberDetails(string Name, DisplayAttribute? DisplayAttribute, Type Type, Func<object, object?> MemberGetter, ValidationAttribute[] ValidationAttributes, bool Recurse, Type? EnumerableType)
 {
-    public object? GetValue(object target) => PropertyGetter(target);
+    public object? GetValue(object target) => MemberGetter(target);
 
     public bool IsEnumerable => EnumerableType != null;
 

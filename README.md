@@ -1,5 +1,5 @@
 # MiniValidation
-A minimalistic validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace. Adds support for single-line validation calls and recursion with cycle detection.
+A minimalistic validation library built atop the existing features in .NET's `System.ComponentModel.DataAnnotations` namespace. Adds support for single-line validation calls for public properties and fields, plus recursion with cycle detection.
 
 Supports .NET Standard 2.0 compliant runtimes.
 

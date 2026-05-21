@@ -51,6 +51,31 @@ public class TryValidate
     }
 
     [Fact]
+    public void RequiredValidator_Invalid_When_Field_Null()
+    {
+        var thingToValidate = new TestTypeWithFields { RequiredField = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithFields.RequiredField), entry.Key);
+    }
+
+    [Fact]
+    public void Validator_DisplayAttribute_Name_Used_In_Error_Message_For_Field()
+    {
+        var thingToValidate = new TestTypeWithFields { RequiredFieldWithDisplay = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        var error = Assert.Single(entry.Value);
+        Assert.Contains("Required field", error);
+    }
+
+    [Fact]
     public void NonRequiredValidator_Invalid_When_Invalid()
     {
         var thingToValidate = new TestType { TenOrMore = 5 };
@@ -231,6 +256,40 @@ public class TryValidate
 
         Assert.False(result);
         Assert.Single(errors);
+    }
+
+    [Fact]
+    public void ReadonlyStructWithFields_Invalid_When_Invalid()
+    {
+        var thingToValidate = new TestReadonlyStructWithFields(requiredField: null, tenOrMoreField: 5);
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains(nameof(TestReadonlyStructWithFields.RequiredField), errors.Keys);
+        Assert.Contains(nameof(TestReadonlyStructWithFields.TenOrMoreField), errors.Keys);
+    }
+
+    [Fact]
+    public void RequiresValidation_True_When_Field_Has_ValidationAttribute()
+    {
+        var result = MiniValidator.RequiresValidation(typeof(TestTypeWithFields), recurse: false);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void Duplicate_Member_Names_Aggregate_Field_And_Property_Errors()
+    {
+        var thingToValidate = new TestTypeWithHiddenRequiredField();
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithHiddenRequiredField.Name), entry.Key);
+        Assert.Equal(2, entry.Value.Length);
     }
 
     [Fact]
@@ -557,5 +616,17 @@ public class TryValidate
         public string Id { get; }
 
         public override bool IsValid(object? value) => false;
+    }
+
+    class TestTypeWithRequiredProperty
+    {
+        [Required]
+        public string? Name { get; set; }
+    }
+
+    class TestTypeWithHiddenRequiredField : TestTypeWithRequiredProperty
+    {
+        [Required]
+        public new string? Name = null;
     }
 }

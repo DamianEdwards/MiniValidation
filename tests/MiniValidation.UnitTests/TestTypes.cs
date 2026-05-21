@@ -246,6 +246,40 @@ struct TestStruct
     public int TenOrMore { get; set; } = 10;
 }
 
+class TestTypeWithFields
+{
+    [Required]
+    public string? RequiredField = "Default";
+
+    [Required, Display(Name = "Required field")]
+    public string? RequiredFieldWithDisplay = "Default";
+
+    [Range(10, 100)]
+    public int TenOrMoreField = 10;
+
+    public TestChildType FieldChild = new();
+
+    [SkipRecursion]
+    public TestChildType SkippedFieldChild = new();
+
+    public IList<TestChildType> FieldChildren = new List<TestChildType>();
+}
+
+readonly struct TestReadonlyStructWithFields
+{
+    public TestReadonlyStructWithFields(string? requiredField = "Default", int tenOrMoreField = 10)
+    {
+        RequiredField = requiredField;
+        TenOrMoreField = tenOrMoreField;
+    }
+
+    [Required]
+    public readonly string? RequiredField;
+
+    [Range(10, 100)]
+    public readonly int TenOrMoreField;
+}
+
 interface IAnInterface { }
 
 #if NET6_0_OR_GREATER
