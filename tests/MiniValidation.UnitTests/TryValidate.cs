@@ -558,4 +558,21 @@ public class TryValidate
 
         public override bool IsValid(object? value) => false;
     }
+
+    [Fact]
+    public void RequiredMemberAttribute_Treated_As_Required()
+    {
+        var thingToValidate = new TestTypeWithRequiredMember { Name = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithRequiredMember.Name), entry.Key);
+    }
+
+    class TestTypeWithRequiredMember
+    {
+        public required string? Name { get; set; }
+    }
 }

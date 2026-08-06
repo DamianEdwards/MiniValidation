@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -250,6 +250,14 @@ internal class TypeDetailsCache
             else if (attr is SkipRecursionAttribute skipRecursionAttr)
             {
                 skipRecursionAttribute = skipRecursionAttr;
+            }
+            else if (attr.GetType().Name == "RequiredMemberAttribute")
+            {
+                validationAttributes ??= new();
+                if (!validationAttributes.OfType<RequiredAttribute>().Any())
+                {
+                    validationAttributes.Add(new RequiredAttribute());
+                }
             }
         }
 
