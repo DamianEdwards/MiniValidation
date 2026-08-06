@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -54,6 +54,12 @@ public static class MiniValidator
     /// <param name="errors">A dictionary that contains details of each failed validation.</param>
     /// <returns><c>true</c> if <paramref name="target"/> is valid; otherwise <c>false</c>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <c>null</c>.</exception>
+    /// <example>
+    /// <code>
+    /// var widget = new Widget { Name = "" };
+    /// var isValid = MiniValidator.TryValidate(widget, out var errors);
+    /// </code>
+    /// </example>
     public static bool TryValidate<TTarget>(TTarget target, out IDictionary<string, string[]> errors)
     {
         return TryValidateImpl(target, null, recurse: true, allowAsync: false, out errors);
