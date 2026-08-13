@@ -560,19 +560,56 @@ public class TryValidate
     }
 
     [Fact]
-    public void RequiredMemberAttribute_Treated_As_Required()
+    public void RequiredMemberAttribute_On_NonNullable_Member_Treated_As_Required()
     {
-        var thingToValidate = new TestTypeWithRequiredMember { Name = null };
+        var thingToValidate = new TestTypeWithNonNullableRequiredMember { Name = null! };
 
         var result = MiniValidator.TryValidate(thingToValidate, out var errors);
 
         Assert.False(result);
         var entry = Assert.Single(errors);
-        Assert.Equal(nameof(TestTypeWithRequiredMember.Name), entry.Key);
+        Assert.Equal(nameof(TestTypeWithNonNullableRequiredMember.Name), entry.Key);
     }
 
-    class TestTypeWithRequiredMember
+    [Fact]
+    public void RequiredMemberAttribute_On_Nullable_Members_Ignored()
+    {
+        var thingToValidate = new TestTypeWithNullableRequiredMembers { Name = null, Count = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Unrelated_RequiredMemberAttribute_Does_Not_Add_Required_Validation()
+    {
+        var thingToValidate = new TestTypeWithCustomRequiredMemberAttr { Name = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    class TestTypeWithNonNullableRequiredMember
+    {
+        public required string Name { get; set; }
+    }
+
+    class TestTypeWithNullableRequiredMembers
     {
         public required string? Name { get; set; }
+        public required int? Count { get; set; }
     }
+
+    class TestTypeWithCustomRequiredMemberAttr
+    {
+        [CustomRequiredMember]
+        public string? Name { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    class CustomRequiredMemberAttribute : Attribute { }
 }

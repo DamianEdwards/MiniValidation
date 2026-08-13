@@ -236,6 +236,8 @@ internal class TypeDetailsCache
                     .Where(attr => !IsDuplicateTypeDescriptorAttribute(attr, propertyAttributes)));
         }
 
+        var hasRequiredMemberAttribute = false;
+
         foreach (var attr in customAttributes)
         {
             if (attr is ValidationAttribute validationAttr)
@@ -251,17 +253,43 @@ internal class TypeDetailsCache
             {
                 skipRecursionAttribute = skipRecursionAttr;
             }
-            else if (attr.GetType().Name == "RequiredMemberAttribute")
+            else if (string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.RequiredMemberAttribute", StringComparison.Ordinal))
             {
-                validationAttributes ??= new();
-                if (!validationAttributes.OfType<RequiredAttribute>().Any())
-                {
-                    validationAttributes.Add(new RequiredAttribute());
-                }
+                hasRequiredMemberAttribute = true;
+            }
+        }
+
+        if (hasRequiredMemberAttribute && !IsPropertyNullable(property))
+        {
+            validationAttributes ??= new();
+            if (!validationAttributes.OfType<RequiredAttribute>().Any())
+            {
+                validationAttributes.Add(new RequiredAttribute());
             }
         }
 
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
+    }
+
+    private static readonly NullabilityInfoContext _nullabilityContext = new();
+
+    private static bool IsPropertyNullable(PropertyInfo property)
+    {
+        if (Nullable.GetUnderlyingType(property.PropertyType) != null)
+        {
+            return true;
+        }
+
+        if (!property.PropertyType.IsValueType)
+        {
+            var nullabilityInfo = _nullabilityContext.Create(property);
+            if (nullabilityInfo.WriteState == NullabilityState.Nullable || nullabilityInfo.ReadState == NullabilityState.Nullable)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsDuplicateTypeDescriptorAttribute(Attribute typeDescriptorAttribute, Attribute[] propertyAttributes)
