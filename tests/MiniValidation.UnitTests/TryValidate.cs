@@ -593,6 +593,13 @@ public class TryValidate
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Required_Value_Types_Do_Not_Trigger_RequiresValidation()
+    {
+        Assert.False(MiniValidator.RequiresValidation(typeof(TestTypeWithRequiredValueType)));
+        Assert.False(MiniValidator.RequiresValidation(typeof(TestTypeWithNullableRequiredMembers)));
+    }
+
     class TestTypeWithNonNullableRequiredMember
     {
         public required string Name { get; set; }
@@ -602,6 +609,11 @@ public class TryValidate
     {
         public required string? Name { get; set; }
         public required int? Count { get; set; }
+    }
+
+    class TestTypeWithRequiredValueType
+    {
+        public required int Value { get; set; }
     }
 
     class TestTypeWithCustomRequiredMemberAttr

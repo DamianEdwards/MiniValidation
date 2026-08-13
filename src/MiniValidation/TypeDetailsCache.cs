@@ -259,7 +259,7 @@ internal class TypeDetailsCache
             }
         }
 
-        if (hasRequiredMemberAttribute && !IsPropertyNullable(property))
+        if (hasRequiredMemberAttribute && !property.PropertyType.IsValueType && !IsReferenceTypeNullable(property))
         {
             validationAttributes ??= new();
             if (!validationAttributes.OfType<RequiredAttribute>().Any())
@@ -271,43 +271,45 @@ internal class TypeDetailsCache
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
     }
 
-#if NET6_0_OR_GREATER
-    private static readonly NullabilityInfoContext _nullabilityContext = new();
-#endif
-
-    private static bool IsPropertyNullable(PropertyInfo property)
+    private static bool IsReferenceTypeNullable(PropertyInfo property)
     {
-        if (Nullable.GetUnderlyingType(property.PropertyType) != null)
-        {
-            return true;
-        }
-
 #if NET6_0_OR_GREATER
-        if (!property.PropertyType.IsValueType)
+        // Create context per lookup for thread safety during concurrent cache initialization
+        var nullabilityContext = new NullabilityInfoContext();
+        var nullabilityInfo = nullabilityContext.Create(property);
+        return nullabilityInfo.WriteState == NullabilityState.Nullable || nullabilityInfo.ReadState == NullabilityState.Nullable;
+#else
+        var nullableAttr = property.GetCustomAttributes(false)
+            .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableAttribute", StringComparison.Ordinal));
+
+        if (nullableAttr != null)
         {
-            var nullabilityInfo = _nullabilityContext.Create(property);
-            if (nullabilityInfo.WriteState == NullabilityState.Nullable || nullabilityInfo.ReadState == NullabilityState.Nullable)
+            var flagsField = nullableAttr.GetType().GetField("NullableFlags");
+            if (flagsField?.GetValue(nullableAttr) is byte[] flags && flags.Length > 0)
             {
-                return true;
+                return flags[0] == 2;
             }
         }
-#else
-        if (!property.PropertyType.IsValueType)
+
+        var declaringType = property.DeclaringType;
+        while (declaringType != null)
         {
-            var nullableAttr = property.GetCustomAttributes(false)
-                .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableAttribute", StringComparison.Ordinal));
-            if (nullableAttr != null)
+            var nullableContextAttr = declaringType.GetCustomAttributes(false)
+                .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableContextAttribute", StringComparison.Ordinal));
+
+            if (nullableContextAttr != null)
             {
-                var flagsField = nullableAttr.GetType().GetField("NullableFlags");
-                if (flagsField?.GetValue(nullableAttr) is byte[] flags && flags.Length > 0 && flags[0] == 2)
+                var flagField = nullableContextAttr.GetType().GetField("Flag");
+                if (flagField?.GetValue(nullableContextAttr) is byte flag)
                 {
-                    return true;
+                    return flag == 2;
                 }
             }
+            declaringType = declaringType.DeclaringType;
         }
-#endif
 
         return false;
+#endif
     }
 
     private static bool IsDuplicateTypeDescriptorAttribute(Attribute typeDescriptorAttribute, Attribute[] propertyAttributes)
