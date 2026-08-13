@@ -271,7 +271,9 @@ internal class TypeDetailsCache
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
     }
 
+#if NET6_0_OR_GREATER
     private static readonly NullabilityInfoContext _nullabilityContext = new();
+#endif
 
     private static bool IsPropertyNullable(PropertyInfo property)
     {
@@ -280,6 +282,7 @@ internal class TypeDetailsCache
             return true;
         }
 
+#if NET6_0_OR_GREATER
         if (!property.PropertyType.IsValueType)
         {
             var nullabilityInfo = _nullabilityContext.Create(property);
@@ -288,6 +291,21 @@ internal class TypeDetailsCache
                 return true;
             }
         }
+#else
+        if (!property.PropertyType.IsValueType)
+        {
+            var nullableAttr = property.GetCustomAttributes(false)
+                .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableAttribute", StringComparison.Ordinal));
+            if (nullableAttr != null)
+            {
+                var flagsField = nullableAttr.GetType().GetField("NullableFlags");
+                if (flagsField?.GetValue(nullableAttr) is byte[] flags && flags.Length > 0 && flags[0] == 2)
+                {
+                    return true;
+                }
+            }
+        }
+#endif
 
         return false;
     }
