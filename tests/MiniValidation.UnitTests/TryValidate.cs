@@ -600,9 +600,47 @@ public class TryValidate
         Assert.False(MiniValidator.RequiresValidation(typeof(TestTypeWithNullableRequiredMembers)));
     }
 
+    [Fact]
+    public void RequiredMemberAttribute_With_AllowNull_Or_MaybeNull_Ignored()
+    {
+        var thingToValidate = new TestTypeWithAllowNullRequiredMember { Value = null! };
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+        Assert.True(result);
+        Assert.Empty(errors);
+
+        var thingToValidateMaybeNull = new TestTypeWithMaybeNullRequiredMember { Value = null! };
+        var resultMaybeNull = MiniValidator.TryValidate(thingToValidateMaybeNull, out errors);
+        Assert.True(resultMaybeNull);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void IsReferenceTypeNullableFallback_Matches_Modern_Behavior()
+    {
+        var propAllowNull = typeof(TestTypeWithAllowNullRequiredMember).GetProperty(nameof(TestTypeWithAllowNullRequiredMember.Value))!;
+        var propMaybeNull = typeof(TestTypeWithMaybeNullRequiredMember).GetProperty(nameof(TestTypeWithMaybeNullRequiredMember.Value))!;
+        var propNonNullable = typeof(TestTypeWithNonNullableRequiredMember).GetProperty(nameof(TestTypeWithNonNullableRequiredMember.Name))!;
+
+        Assert.True(TypeDetailsCache.IsReferenceTypeNullableFallback(propAllowNull));
+        Assert.True(TypeDetailsCache.IsReferenceTypeNullableFallback(propMaybeNull));
+        Assert.False(TypeDetailsCache.IsReferenceTypeNullableFallback(propNonNullable));
+    }
+
     class TestTypeWithNonNullableRequiredMember
     {
         public required string Name { get; set; }
+    }
+
+    class TestTypeWithAllowNullRequiredMember
+    {
+        [System.Diagnostics.CodeAnalysis.AllowNull]
+        public required string Value { get; set; }
+    }
+
+    class TestTypeWithMaybeNullRequiredMember
+    {
+        [System.Diagnostics.CodeAnalysis.MaybeNull]
+        public required string Value { get; set; }
     }
 
     class TestTypeWithNullableRequiredMembers
