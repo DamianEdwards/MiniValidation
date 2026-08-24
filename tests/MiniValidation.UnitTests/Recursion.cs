@@ -65,6 +65,43 @@ public class Recursion
     }
 
     [Fact]
+    public void Invalid_When_Field_Child_Invalid_And_Recurse_Default()
+    {
+        var thingToValidate = new TestTypeWithFields { FieldChild = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Collection(errors,
+            entry => Assert.Equal($"{nameof(TestTypeWithFields.FieldChild)}.{nameof(TestChildType.RequiredCategory)}", entry.Key),
+            entry => Assert.Equal($"{nameof(TestTypeWithFields.FieldChild)}.{nameof(TestChildType.MinLengthFive)}", entry.Key)
+        );
+    }
+
+    [Fact]
+    public void Valid_When_Field_Child_Invalid_And_Recurse_False()
+    {
+        var thingToValidate = new TestTypeWithFields { FieldChild = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: false, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Valid_When_Field_Child_Invalid_And_Field_Decorated_With_SkipRecursion()
+    {
+        var thingToValidate = new TestTypeWithFields { SkippedFieldChild = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } };
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void Invalid_When_Enumerable_Item_Invalid_When_Recurse_Default()
     {
         var thingToValidate = new List<TestType> { new() { Child = new TestChildType { RequiredCategory = null, MinLengthFive = "123" } } };
@@ -189,6 +226,21 @@ public class Recursion
         Assert.Equal(2, errors.Count);
         Assert.Contains($"{nameof(TestType.Children)}[0].{nameof(TestChildType.MinLengthFive)}", errors.Keys);
         Assert.Contains($"{nameof(TestType.Children)}[1].{nameof(TestChildType.RequiredCategory)}", errors.Keys);
+    }
+
+    [Fact]
+    public void All_Errors_In_Descendant_Enumerable_Field_Are_Reported()
+    {
+        var thingToValidate = new TestTypeWithFields();
+        thingToValidate.FieldChildren.Add(new() { MinLengthFive = "123" });
+        thingToValidate.FieldChildren.Add(new() { RequiredCategory = null });
+
+        var result = MiniValidator.TryValidate(thingToValidate, recurse: true, out var errors);
+
+        Assert.False(result);
+        Assert.Equal(2, errors.Count);
+        Assert.Contains($"{nameof(TestTypeWithFields.FieldChildren)}[0].{nameof(TestChildType.MinLengthFive)}", errors.Keys);
+        Assert.Contains($"{nameof(TestTypeWithFields.FieldChildren)}[1].{nameof(TestChildType.RequiredCategory)}", errors.Keys);
     }
 
     [Fact]

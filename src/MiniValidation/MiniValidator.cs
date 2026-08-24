@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace MiniValidation;
 
 /// <summary>
-/// Contains methods and properties for performing validation operations with <see cref="Validator"/> on objects whos properties
+/// Contains methods for performing validation operations with <see cref="Validator"/> on objects whose public properties or fields
 /// are decorated with <see cref="ValidationAttribute"/>s.
 /// </summary>
 public static class MiniValidator
@@ -44,7 +44,7 @@ public static class MiniValidator
         return typeof(IValidatableObject).IsAssignableFrom(targetType)
             || typeof(IAsyncValidatableObject).IsAssignableFrom(targetType)
             || (recurse && typeof(IEnumerable).IsAssignableFrom(targetType))
-            || _typeDetailsCache.Get(targetType).Properties.Any(p => p.HasValidationAttributes || recurse);
+            || _typeDetailsCache.Get(targetType).Members.Any(m => m.HasValidationAttributes || recurse);
     }
 
     /// <summary>
@@ -395,46 +395,46 @@ public static class MiniValidator
         // Add current target to tracking dictionary in null (validating) state
         validatedObjects.Add(target, null);
 
-        var (typeProperties, _) = _typeDetailsCache.Get(targetType);
+        var (typeMembers, _) = _typeDetailsCache.Get(targetType);
 
         var isValid = true;
-        var propertiesToRecurse = recurse ? new Dictionary<PropertyDetails, object>() : null;
+        var membersToRecurse = recurse ? new Dictionary<MemberDetails, object>() : null;
         var validationContext = new ValidationContext(target, serviceProvider: serviceProvider, items: null);
 
-        foreach (var property in typeProperties)
+        foreach (var member in typeMembers)
         {
-            // Skip properties that don't have validation attributes if we're not recursing
-            if (!(property.HasValidationAttributes || recurse))
+            // Skip members that don't have validation attributes if we're not recursing
+            if (!(member.HasValidationAttributes || recurse))
             {
                 continue;
             }
 
-            var propertyValue = property.GetValue(target);
-            var propertyValueType = propertyValue?.GetType();
-            var (properties, _) = _typeDetailsCache.Get(propertyValueType);
+            var memberValue = member.GetValue(target);
+            var memberValueType = memberValue?.GetType();
+            var (members, _) = _typeDetailsCache.Get(memberValueType);
 
-            if (property.HasValidationAttributes)
+            if (member.HasValidationAttributes)
             {
-                validationContext.MemberName = property.Name;
-                validationContext.DisplayName = GetDisplayName(property);
+                validationContext.MemberName = member.Name;
+                validationContext.DisplayName = GetDisplayName(member);
                 validationResults ??= new();
-                var propertyIsValid = Validator.TryValidateValue(propertyValue!, validationContext, validationResults, property.ValidationAttributes);
+                var memberIsValid = Validator.TryValidateValue(memberValue!, validationContext, validationResults, member.ValidationAttributes);
 
-                if (!propertyIsValid)
+                if (!memberIsValid)
                 {
-                    ProcessValidationResults(property.Name, validationResults, workingErrors, prefix);
+                    ProcessValidationResults(member.Name, validationResults, workingErrors, prefix);
                     isValid = false;
                 }
             }
 
-            if (recurse && propertyValue is not null &&
-                !TypeDetailsCache.IsNonValidatableType(propertyValueType!) &&
-                (property.Recurse
-                 || typeof(IValidatableObject).IsAssignableFrom(propertyValueType)
-                 || typeof(IAsyncValidatableObject).IsAssignableFrom(propertyValueType)
-                 || properties.Any(p => p.Recurse)))
+            if (recurse && memberValue is not null &&
+                !TypeDetailsCache.IsNonValidatableType(memberValueType!) &&
+                (member.Recurse
+                 || typeof(IValidatableObject).IsAssignableFrom(memberValueType)
+                 || typeof(IAsyncValidatableObject).IsAssignableFrom(memberValueType)
+                 || members.Any(p => p.Recurse)))
             {
-                propertiesToRecurse!.Add(property, propertyValue);
+                membersToRecurse!.Add(member, memberValue);
             }
         }
 
@@ -461,23 +461,23 @@ public static class MiniValidator
                 isValid = await validateTask.ConfigureAwait(false) && isValid;
             }
 
-            // Validate complex properties
-            if (propertiesToRecurse!.Count > 0)
+            // Validate complex members
+            if (membersToRecurse!.Count > 0)
             {
-                foreach (var property in propertiesToRecurse)
+                foreach (var member in membersToRecurse)
                 {
-                    var propertyDetails = property.Key;
-                    var propertyValue = property.Value;
+                    var memberDetails = member.Key;
+                    var memberValue = member.Value;
 
-                    if (propertyValue != null)
+                    if (memberValue != null)
                     {
                         RuntimeHelpers.EnsureSufficientExecutionStack();
 
-                        if (propertyDetails.IsEnumerable && propertyValue is IEnumerable propertyValues)
+                        if (memberDetails.IsEnumerable && memberValue is IEnumerable memberValues)
                         {
-                            var thePrefix = $"{prefix}{propertyDetails.Name}";
+                            var thePrefix = $"{prefix}{memberDetails.Name}";
 
-                            var validateTask = TryValidateEnumerable(propertyValues, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
+                            var validateTask = TryValidateEnumerable(memberValues, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth);
                             try
                             {
                                 ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
@@ -491,11 +491,11 @@ public static class MiniValidator
 
                             isValid = await validateTask.ConfigureAwait(false) && isValid;
                         }
-                        else if (!propertyDetails.IsEnumerable)
+                        else if (!memberDetails.IsEnumerable)
                         {
-                            var thePrefix = $"{prefix}{propertyDetails.Name}."; // <-- Note trailing '.' here
+                            var thePrefix = $"{prefix}{memberDetails.Name}."; // <-- Note trailing '.' here
 
-                            var validateTask = TryValidateImpl(propertyValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
+                            var validateTask = TryValidateImpl(memberValue, serviceProvider, recurse, allowAsync, workingErrors, validatedObjects, validationResults, thePrefix, currentDepth + 1);
                             try
                             {
                                 ThrowIfAsyncNotAllowed(validateTask.IsCompleted, allowAsync);
@@ -548,9 +548,9 @@ public static class MiniValidator
 
         return isValid;
 
-        static string GetDisplayName(PropertyDetails property)
+        static string GetDisplayName(MemberDetails member)
         {
-            return property.DisplayAttribute?.GetName() ?? property.Name;
+            return member.DisplayAttribute?.GetName() ?? member.Name;
         }
     }
 
@@ -676,21 +676,25 @@ public static class MiniValidator
         }
     }
 
-    private static void ProcessValidationResults(string propertyName, ICollection<ValidationResult> validationResults, Dictionary<string, List<string>> errors, string? prefix)
+    private static void ProcessValidationResults(string memberName, ICollection<ValidationResult> validationResults, Dictionary<string, List<string>> errors, string? prefix)
     {
         if (validationResults.Count == 0)
         {
             return;
         }
 
-        var errorsList = new List<string>(validationResults.Count);
+        var key = $"{prefix}{memberName}";
+        if (!errors.TryGetValue(key, out var errorsList))
+        {
+            errorsList = new List<string>(validationResults.Count);
+            errors.Add(key, errorsList);
+        }
 
         foreach (var result in validationResults)
         {
             errorsList.Add(result.ErrorMessage ?? "");
         }
 
-        errors.Add($"{prefix}{propertyName}", errorsList);
         validationResults.Clear();
     }
 }
