@@ -558,4 +558,108 @@ public class TryValidate
 
         public override bool IsValid(object? value) => false;
     }
+
+    [Fact]
+    public void RequiredMemberAttribute_On_NonNullable_Member_Treated_As_Required()
+    {
+        var thingToValidate = new TestTypeWithNonNullableRequiredMember { Name = null! };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.False(result);
+        var entry = Assert.Single(errors);
+        Assert.Equal(nameof(TestTypeWithNonNullableRequiredMember.Name), entry.Key);
+    }
+
+    [Fact]
+    public void RequiredMemberAttribute_On_Nullable_Members_Ignored()
+    {
+        var thingToValidate = new TestTypeWithNullableRequiredMembers { Name = null, Count = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Unrelated_RequiredMemberAttribute_Does_Not_Add_Required_Validation()
+    {
+        var thingToValidate = new TestTypeWithCustomRequiredMemberAttr { Name = null };
+
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+
+        Assert.True(result);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Required_Value_Types_Do_Not_Trigger_RequiresValidation()
+    {
+        Assert.False(MiniValidator.RequiresValidation(typeof(TestTypeWithRequiredValueType)));
+        Assert.False(MiniValidator.RequiresValidation(typeof(TestTypeWithNullableRequiredMembers)));
+    }
+
+    [Fact]
+    public void RequiredMemberAttribute_With_AllowNull_Or_MaybeNull_Ignored()
+    {
+        var thingToValidate = new TestTypeWithAllowNullRequiredMember { Value = null! };
+        var result = MiniValidator.TryValidate(thingToValidate, out var errors);
+        Assert.True(result);
+        Assert.Empty(errors);
+
+        var thingToValidateMaybeNull = new TestTypeWithMaybeNullRequiredMember { Value = null! };
+        var resultMaybeNull = MiniValidator.TryValidate(thingToValidateMaybeNull, out errors);
+        Assert.True(resultMaybeNull);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void IsReferenceTypeNullableFallback_Matches_Modern_Behavior()
+    {
+        var propAllowNull = typeof(TestTypeWithAllowNullRequiredMember).GetProperty(nameof(TestTypeWithAllowNullRequiredMember.Value))!;
+        var propMaybeNull = typeof(TestTypeWithMaybeNullRequiredMember).GetProperty(nameof(TestTypeWithMaybeNullRequiredMember.Value))!;
+        var propNonNullable = typeof(TestTypeWithNonNullableRequiredMember).GetProperty(nameof(TestTypeWithNonNullableRequiredMember.Name))!;
+
+        Assert.True(TypeDetailsCache.IsReferenceTypeNullableFallback(propAllowNull));
+        Assert.True(TypeDetailsCache.IsReferenceTypeNullableFallback(propMaybeNull));
+        Assert.False(TypeDetailsCache.IsReferenceTypeNullableFallback(propNonNullable));
+    }
+
+    class TestTypeWithNonNullableRequiredMember
+    {
+        public required string Name { get; set; }
+    }
+
+    class TestTypeWithAllowNullRequiredMember
+    {
+        [System.Diagnostics.CodeAnalysis.AllowNull]
+        public required string Value { get; set; }
+    }
+
+    class TestTypeWithMaybeNullRequiredMember
+    {
+        [System.Diagnostics.CodeAnalysis.MaybeNull]
+        public required string Value { get; set; }
+    }
+
+    class TestTypeWithNullableRequiredMembers
+    {
+        public required string? Name { get; set; }
+        public required int? Count { get; set; }
+    }
+
+    class TestTypeWithRequiredValueType
+    {
+        public required int Value { get; set; }
+    }
+
+    class TestTypeWithCustomRequiredMemberAttr
+    {
+        [CustomRequiredMember]
+        public string? Name { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    class CustomRequiredMemberAttribute : Attribute { }
 }

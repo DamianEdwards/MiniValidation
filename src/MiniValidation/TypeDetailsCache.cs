@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,6 +6,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("MiniValidation.UnitTests")]
 
 namespace MiniValidation;
 
@@ -236,6 +239,8 @@ internal class TypeDetailsCache
                     .Where(attr => !IsDuplicateTypeDescriptorAttribute(attr, propertyAttributes)));
         }
 
+        var hasRequiredMemberAttribute = false;
+
         foreach (var attr in customAttributes)
         {
             if (attr is ValidationAttribute validationAttr)
@@ -251,9 +256,111 @@ internal class TypeDetailsCache
             {
                 skipRecursionAttribute = skipRecursionAttr;
             }
+            else if (string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.RequiredMemberAttribute", StringComparison.Ordinal))
+            {
+                hasRequiredMemberAttribute = true;
+            }
+        }
+
+        if (hasRequiredMemberAttribute && !property.PropertyType.IsValueType && !IsReferenceTypeNullable(property))
+        {
+            validationAttributes ??= new();
+            if (!validationAttributes.OfType<RequiredAttribute>().Any())
+            {
+                validationAttributes.Add(new RequiredAttribute());
+            }
         }
 
         return new(validationAttributes?.ToArray(), displayAttribute, skipRecursionAttribute);
+    }
+
+    internal static bool IsReferenceTypeNullable(PropertyInfo property)
+    {
+#if NET6_0_OR_GREATER
+        // Create context per lookup for thread safety during concurrent cache initialization
+        var nullabilityContext = new NullabilityInfoContext();
+        var nullabilityInfo = nullabilityContext.Create(property);
+        return nullabilityInfo.WriteState == NullabilityState.Nullable || nullabilityInfo.ReadState == NullabilityState.Nullable;
+#else
+        return IsReferenceTypeNullableFallback(property);
+#endif
+    }
+
+    internal static bool IsReferenceTypeNullableFallback(PropertyInfo property)
+    {
+        if (HasNullableFlowAttribute(property))
+        {
+            return true;
+        }
+
+        var nullableAttr = property.GetCustomAttributes(false)
+            .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableAttribute", StringComparison.Ordinal));
+
+        if (nullableAttr != null)
+        {
+            var flagsField = nullableAttr.GetType().GetField("NullableFlags");
+            if (flagsField?.GetValue(nullableAttr) is byte[] flags && flags.Length > 0)
+            {
+                return flags[0] == 2;
+            }
+        }
+
+        var declaringType = property.DeclaringType;
+        while (declaringType != null)
+        {
+            var nullableContextAttr = declaringType.GetCustomAttributes(false)
+                .FirstOrDefault(attr => string.Equals(attr.GetType().FullName, "System.Runtime.CompilerServices.NullableContextAttribute", StringComparison.Ordinal));
+
+            if (nullableContextAttr != null)
+            {
+                var flagField = nullableContextAttr.GetType().GetField("Flag");
+                if (flagField?.GetValue(nullableContextAttr) is byte flag)
+                {
+                    return flag == 2;
+                }
+            }
+            declaringType = declaringType.DeclaringType;
+        }
+
+        return false;
+    }
+
+    private static bool HasNullableFlowAttribute(PropertyInfo property)
+    {
+        if (HasAllowOrMaybeNullAttribute(property.GetCustomAttributes(false)))
+        {
+            return true;
+        }
+
+        if (property.GetMethod is { } getMethod && HasAllowOrMaybeNullAttribute(getMethod.ReturnParameter.GetCustomAttributes(false)))
+        {
+            return true;
+        }
+
+        if (property.SetMethod is { } setMethod)
+        {
+            var setParams = setMethod.GetParameters();
+            if (setParams.Length > 0 && HasAllowOrMaybeNullAttribute(setParams[setParams.Length - 1].GetCustomAttributes(false)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasAllowOrMaybeNullAttribute(object[] attributes)
+    {
+        foreach (var attr in attributes)
+        {
+            var fullName = attr.GetType().FullName;
+            if (string.Equals(fullName, "System.Diagnostics.CodeAnalysis.AllowNullAttribute", StringComparison.Ordinal)
+                || string.Equals(fullName, "System.Diagnostics.CodeAnalysis.MaybeNullAttribute", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static bool IsDuplicateTypeDescriptorAttribute(Attribute typeDescriptorAttribute, Attribute[] propertyAttributes)
