@@ -164,7 +164,7 @@ internal class TypeDetailsCache
         _cache[type] = (propertiesToValidate?.ToArray() ?? _emptyPropertyDetails, requiresAsync);
     }
 
-    private static bool DoNotRecurseIntoPropertiesOf(Type type) =>
+    internal static bool DoNotRecurseIntoPropertiesOf(Type type) =>
         type == typeof(object)
         || type.IsPrimitive
         || type.IsArray
@@ -383,7 +383,7 @@ internal class TypeDetailsCache
         return false;
     }
 
-    private static Type? GetEnumerableType(Type type)
+    internal static Type? GetEnumerableType(Type type)
     {
         if (type.IsInterface && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
